@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<binding>
+    <bind action="begin" type="download">
+        <url value="{livesearch.download}"/>
+        <query name="task" valueRef="@task" />
+        <query name="user" valueRef="@user"/>
+        <compression type="zip" />
+        <download port="flowParams" type="file">
+			<query name="resource" value="params"/>
+		</download>
+        <downloadParams>
+			<query name="resource" value="params"/>
+		</downloadParams>
+        <download port="fastadb" type="folder">
+            <query name="resource" value="fastadb"/>
+        </download>
+        <download port="task_file" type="folder">
+            <query name="resource" value="task_file"/>
+        </download>
+    </bind>
+
+    <bind action="grab_external_task_results_create_params" tool="create_parallel_params">
+        <productionToOutput port="grab_external_task_results_parallel_parameters"    production="parallel_parameters"/>
+    </bind>
+
+    <bind action="grab_external_task_results_parallel_step" tool="grab_external_task_results_parallel_step">
+        <inputAsRequirement port="grab_external_task_results_parallel_parameters"       requirement="grab_external_task_results_parallel_parameters"/>
+        <inputAsRequirement port="flowParams"       requirement="flowParams"/>
+        <inputAsRequirement port="task_file"       requirement="task_file"/>
+        <productionToOutput port="task_peptide_results"           production="task_peptide_results"/>
+        <productionToOutput port="task_psm_results"           production="task_psm_results"/>
+        <productionToOutput port="original_task_summaries_parallel"           production="original_task_summaries_parallel"/>
+    </bind>
+
+    <bind action="generate_spectra_to_extract_create_params" tool="create_parallel_params">
+        <productionToOutput port="generate_spectra_to_extract_parallel_parameters"    production="parallel_parameters"/>
+    </bind>
+
+    <bind action="generate_spectra_to_extract" tool="generate_spectra_to_extract">
+        <inputAsRequirement port="generate_spectra_to_extract_parallel_parameters"       requirement="generate_spectra_to_extract_parallel_parameters"/>
+        <inputAsRequirement port="flowParams"       requirement="flowParams"/>
+        <inputAsRequirement port="task_psm_results"       requirement="task_psm_results"/>
+        <productionToOutput port="parallel_extract_spectra_psms"           production="parallel_extract_spectra_psms"/>
+    </bind>
+
+    <bind action="extract_spectra_parallel_step" tool="extract_spectra_parallel_step">
+        <inputAsRequirement port="flowParams"       requirement="flowParams"/>
+        <inputAsRequirement port="parallel_extract_spectra_psms"       requirement="parallel_extract_spectra_psms"/>
+        <productionToOutput port="extracted_peaks"           production="extracted_peaks"/>
+    </bind>
+
+    <bind action="generate_parallel_bin_extracted_spectra_params" tool="create_parallel_params">
+        <productionToOutput port="parallel_bin_extracted_spectra_params"    production="parallel_parameters"/>
+    </bind>
+
+    <bind action="extract_spectra_binning_by_peptide" tool="extract_spectra_binning_by_peptide">
+        <inputAsRequirement port="parallel_bin_extracted_spectra_params"       requirement="parallel_bin_extracted_spectra_params"/>
+        <inputAsRequirement port="extracted_peaks"       requirement="extracted_peaks"/>
+        <productionToOutput port="extracted_peaks_to_peptide_bins"           production="extracted_peaks_to_peptide_bins"/>
+        <productionToOutput port="extracted_spectra_peptides"           production="extracted_spectra_peptides"/>
+    </bind>
+
+    <bind action="merge_peptide_files" tool="merge_tsv_efficient">
+        <inputAsRequirement port="extracted_spectra_peptides"       requirement="consensus_evaluation_results"/>
+        <productionToOutput port="extracted_spectra_peptides_merged"           production="consensus_evaluation_result_tsv"/>
+    </bind>
+
+    <bind action="end" type="upload">
+        <url value="{livesearch.upload}"/>
+        <query name="task" valueRef="@task"/>
+        <contentQuery name="content"/>
+        <compression type="zip"/>
+
+        <upload port="extracted_spectra_peptides_merged" type="file">
+            <query name="resource" value="extracted_spectra_peptides_merged"/>
+        </upload>
+
+        <upload port="extracted_peaks_to_peptide_bins" type="file">
+            <query name="resource" value="extracted_peaks_to_peptide_bins"/>
+        </upload>
+    </bind>
+</binding>

@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<interface id="basicworkflow" version="1.2.5">
+    <workflow-id>LIBRARY_CREATION_SPECTRA_EXTRACTION</workflow-id>
+    <workflow-label>LIBRARY_CREATION_SPECTRA_EXTRACTION</workflow-label>
+
+    <!-- Parameter declarations -->
+    <parameters>
+        <!-- Universal parameters -->
+        <parameter name="desc" label="Description">
+            <validator type="length" maximum="1000"/>
+        </parameter>
+        <parameter name="email" label="Email">
+            <validator type="email"/>
+        </parameter>
+
+        <parameter name="tasks_to_consolidate" label="tasks_to_consolidate">
+            <default value="[]"/>
+        </parameter>
+
+        <parameter name="instrument_collision" label="Instrument Collision">
+            <default value="HCD"/>
+            <options>
+				<option value="HCD"/>
+				<option value="CID"/>
+                <option value="None"/>
+			</options>
+            <validator type="set"/>
+        </parameter>
+
+        <parameter name="min_explained_intensity" label="Minimum Explained Intensity">
+			<default value="0.4"/>
+			<validator type="float" minimum="0.0" maximum="1.0"/>
+		</parameter>
+
+        <parameter name="FilterSpectraWithAmbiguityScores" label="Filter Spectra With Appropriate Ambiguity Scores">
+			<options>
+				<option value="Yes"/>
+				<option value="No"/>
+			</options>
+			<validator type="set"/>
+		</parameter>
+
+        <parameter name="kl_strict_max" label="kl_strict_max">
+			<default value="50.0"/>
+			<validator type="float" minimum="0" maximum="50.0"/>
+		</parameter>
+
+        <parameter name="kl_unstrict_max" label="kl_unstrict_max">
+			<default value="50.0"/>
+			<validator type="float" minimum="0" maximum="50.0"/>
+		</parameter>
+
+        <parameter name="kl_interscore_max" label="kl_interscore_max">
+			<default value="50.0"/>
+			<validator type="float" minimum="0" maximum="50.0"/>
+		</parameter>
+
+
+
+
+        <parameter name="min_number_of_peaks_within_1_percent_of_max" label="min_number_of_peaks_within_1_percent_of_max">
+			<default value="3"/>
+			<validator type="float" minimum="0.0" maximum="100.0"/>
+		</parameter>
+
+        <parameter name="min_signal_peaks" label="min_signal_peaks">
+			<default value="2"/>
+			<validator type="float" minimum="0.0" maximum="100.0"/>
+		</parameter>
+
+        <parameter name="min_snr_filter" label="min_snr_filter">
+			<default value="2"/>
+			<validator type="float" minimum="0.0" maximum="100.0"/>
+		</parameter>
+
+        <parameter name="min_number_of_annotated_ions" label="min_number_of_annotated_ions">
+			<default value="6"/>
+			<validator type="float" minimum="0.0" maximum="100.0"/>
+		</parameter>
+
+        <parameter name="max_ppm_error" label="max_ppm_error">
+			<default value="50"/>
+		</parameter>
+
+
+        <parameter name="task_file" label="task_file">
+			<fileGenerator type="upload" purpose="spectrum" target="task_file"/>
+            <default value="f.mwang87/data/Proteomics/PeptideLibraryCreation/LibraryMaterials/empty_task_extractions/empty_tasks.tsv;"/>
+		</parameter>
+
+    </parameters>
+    <block label="Extraction Selection">
+        <row>
+            <cell colspan="3">
+                <module id="extractionselection" type="extractionselection">
+                    <property name="property">property</property>
+                </module>
+            </cell>
+        </row>
+    </block>
+
+
+    <!-- Input form layout -->
+    <block label="Parameters">
+        <row>
+            <cell>
+                <label>
+                    <content parameter="instrument_collision"/>
+                </label>
+            </cell>
+            <cell>
+                <input type="select" parameter="instrument_collision"/>
+            </cell>
+        </row>
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="min_explained_intensity"/>
+                </label>
+            </cell>
+            <cell>
+                <input parameter="min_explained_intensity" type="text">
+                    <attribute name="size" value="30"/>
+                </input>
+            </cell>
+        </row>
+    </block>
+
+    <block label="Advanced Parameters">
+        <row>
+            <cell>
+                <label>
+                    <content parameter="task_file"/>
+                </label>
+            </cell>
+            <cell colspan="3">
+                <module id="task_file" type="fileSelector">
+                    <property name="label">task_file</property>
+                </module>
+            </cell>
+        </row>
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="tasks_to_consolidate"/>
+                </label>
+            </cell>
+            <cell>
+                <input parameter="tasks_to_consolidate" type="text">
+                    <attribute name="size" value="30"/>
+                </input>
+            </cell>
+        </row>
+
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="FilterSpectraWithAmbiguityScores"/>
+                </label>
+            </cell>
+            <cell>
+                <input type="select" parameter="FilterSpectraWithAmbiguityScores"/>
+            </cell>
+        </row>
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="kl_strict_max"/>
+                </label>
+            </cell>
+            <cell>
+                <input parameter="kl_strict_max" type="text">
+                    <attribute name="size" value="30"/>
+                </input>
+            </cell>
+        </row>
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="kl_unstrict_max"/>
+                </label>
+            </cell>
+            <cell>
+                <input parameter="kl_unstrict_max" type="text">
+                    <attribute name="size" value="30"/>
+                </input>
+            </cell>
+        </row>
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="kl_interscore_max"/>
+                </label>
+            </cell>
+            <cell>
+                <input parameter="kl_interscore_max" type="text">
+                    <attribute name="size" value="30"/>
+                </input>
+            </cell>
+        </row>
+
+
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="min_signal_peaks"/>
+                </label>
+            </cell>
+            <cell>
+                <input parameter="min_signal_peaks" type="text">
+                    <attribute name="size" value="30"/>
+                </input>
+            </cell>
+        </row>
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="min_number_of_peaks_within_1_percent_of_max"/>
+                </label>
+            </cell>
+            <cell>
+                <input parameter="min_number_of_peaks_within_1_percent_of_max" type="text">
+                    <attribute name="size" value="30"/>
+                </input>
+            </cell>
+        </row>
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="min_snr_filter"/>
+                </label>
+            </cell>
+            <cell>
+                <input parameter="min_snr_filter" type="text">
+                    <attribute name="size" value="30"/>
+                </input>
+            </cell>
+        </row>
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="min_number_of_annotated_ions"/>
+                </label>
+            </cell>
+            <cell>
+                <input parameter="min_number_of_annotated_ions" type="text">
+                    <attribute name="size" value="30"/>
+                </input>
+            </cell>
+        </row>
+
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="max_ppm_error"/>
+                </label>
+            </cell>
+            <cell>
+                <input parameter="max_ppm_error" type="text">
+                    <attribute name="size" value="30"/>
+                </input>
+            </cell>
+        </row>
+
+    </block>
+</interface>

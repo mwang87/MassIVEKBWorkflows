@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<flow name="spectra-librarycreation-extraction">
+	<object     name="workflowParameters"/>
+
+	<collection name="grab_external_task_results_parallel_parameters"/>
+	<collection name="original_task_summaries_parallel"/>
+	<collection name="task_peptide_results_parallel"/>
+	<collection name="task_psm_results_parallel"/>
+
+	<collection name="generate_spectra_to_extract_parallel_parameters"/>
+
+
+
+
+
+	<collection name="task_peptide_results"/>
+	<collection name="task_psm_results"/>
+
+	<object     name="filtered_combined_psm_results"/>
+	<object     name="filtered_combined_peptide_results"/>
+
+    <collection name="parallel_extract_spectra_params"/>
+
+	<object     name="original_task_summaries"/>
+
+	<collection name="parallel_bin_extracted_spectra_params"/>
+
+    <collection name="parallel_extract_spectra_psms"/>
+    <collection name="extracted_peaks"/>
+
+    <collection name="extracted_peaks_to_peptide_bins"/>
+    <collection name="consensus_evaluation_results"/>
+    <collection name="consensus_evaluation_score_results"/>
+    <collection name="all_psm_evaluations_folder"/>
+    <collection name="all_precursor_evaluations_folder"/>
+	<collection name="all_library_spectrum_output_folder"/>
+
+    <object name="consensus_evaluation_result_tsv"/>
+    <object name="consensus_evaluation_score_result_tsv"/>
+    <object name="all_psm_evaluations_file"/>
+    <object name="all_precursor_evaluations_file"/>
+
+    <object name="task_file"/>
+
+    <collection name="extracted_spectra_peptides"/>
+    <object name="extracted_spectra_peptides_merged"/>
+
+
+	<action name="begin">
+		<output port="flowParams" object="workflowParameters"/>
+        <output port="task_file" 		  object="task_file"/>
+	</action>
+
+	<action name="grab_external_task_results_create_params">
+		<input port="workflowParameters" object="workflowParameters"/>
+        <output port="grab_external_task_results_parallel_parameters"       collection="grab_external_task_results_parallel_parameters"/>
+    </action>
+
+	<action name="grab_external_task_results_parallel_step" multiplicity="multiple" type="parallel">
+		<input  port="grab_external_task_results_parallel_parameters"             collection="grab_external_task_results_parallel_parameters" transformation="unfolding"/>
+		<input  port="flowParams"             object="workflowParameters"/>
+        <input  port="task_file"             object="task_file"/>
+		<output port="task_peptide_results"           collection="task_peptide_results"/>
+		<output port="task_psm_results"           collection="task_psm_results"/>
+		<output port="original_task_summaries_parallel"           collection="original_task_summaries_parallel"/>
+	</action>
+
+	<action name="generate_spectra_to_extract_create_params">
+		<input port="workflowParameters" object="workflowParameters"/>
+        <output port="generate_spectra_to_extract_parallel_parameters"       collection="generate_spectra_to_extract_parallel_parameters"/>
+    </action>
+
+	<action name="generate_spectra_to_extract" multiplicity="multiple" type="parallel">
+		<input  port="generate_spectra_to_extract_parallel_parameters"             collection="generate_spectra_to_extract_parallel_parameters" transformation="unfolding"/>
+		<input  port="flowParams"             object="workflowParameters"/>
+		<input  port="task_psm_results"             collection="task_psm_results"/>
+		<output port="parallel_extract_spectra_psms"           collection="parallel_extract_spectra_psms"/>
+	</action>
+
+    <action name="extract_spectra_parallel_step" multiplicity="multiple" type="parallel">
+		<input  port="flowParams"             object="workflowParameters"/>
+		<input  port="parallel_extract_spectra_psms"             collection="parallel_extract_spectra_psms" transformation="unfolding"/>
+		<output port="extracted_peaks"           collection="extracted_peaks"/>
+	</action>
+
+	<action name="generate_parallel_bin_extracted_spectra_params">
+		<input port="workflowParameters" object="workflowParameters"/>
+        <output port="parallel_bin_extracted_spectra_params"       collection="parallel_bin_extracted_spectra_params"/>
+    </action>
+
+	<action name="extract_spectra_binning_by_peptide" multiplicity="multiple" type="parallel">
+		<input  port="parallel_bin_extracted_spectra_params" collection="parallel_bin_extracted_spectra_params" transformation="unfolding"/>
+		<input  port="extracted_peaks" collection="extracted_peaks"/>
+		<output port="extracted_peaks_to_peptide_bins" collection="extracted_peaks_to_peptide_bins"/>
+        <output port="extracted_spectra_peptides" collection="extracted_spectra_peptides"/>
+	</action>
+
+    <action name="merge_peptide_files">
+		<input  port="extracted_spectra_peptides" collection="extracted_spectra_peptides"/>
+		<output port="extracted_spectra_peptides_merged" object="extracted_spectra_peptides_merged"/>
+	</action>
+
+	<action name="end">
+		<input port="grab_external_task_results_parallel_parameters"           collection="grab_external_task_results_parallel_parameters"/>
+		<input port="extracted_spectra_peptides_merged"           object="extracted_spectra_peptides_merged"/>
+        <input port="extracted_peaks_to_peptide_bins"           collection="extracted_peaks_to_peptide_bins"/>
+	</action>
+</flow>

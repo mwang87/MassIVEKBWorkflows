@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<interface id="speclib_add" version="1.2.3">
+    <download></download>
+
+    <view id="extracted_spectra_peptides_merged" label="Unfiltered Peptide List" group="Peptide Results">
+        <blockRef id="main" type="extracted_spectra_peptides_merged"/>
+    </view>
+    <block id="extracted_spectra_peptides_merged" type="table_ss">
+        <data>
+            <source type="file" name="extracted_spectra_peptides_merged/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="annotation_key" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="annotation_key" label="annotation_key" width="12"/>
+            <column type="text" field="annotation" label="annotation" width="20"/>
+            <column type="text" field="charge" label="charge"/>
+            <column type="float" field="score" label="score" precision="2"/>
+            <column type="text" field="protein" label="protein"/>
+        </row>
+    </block>
+
+    <view id="augment_dataset" label="Create Library from Extracts" group="Library Creation">
+        <blockRef id="main" type="augment_dataset"/>
+    </view>
+    <block id="augment_dataset" type="dummylinkout">
+        <data>
+            <parsers>
+                <parser type="stream" contentType="text/xml"/>
+            </parsers>
+        </data>
+        <parameter name="URLBASE" value="index.jsp"/>
+        <parameter name="REQUESTPARAMETER=params" value='{"workflow":"LIBRARY_CREATION_AUGMENT_LIBRARY_TEST","extracted_peaks_to_peptide_bins":"d.[task]/extracted_peaks_to_peptide_bins;", "new_peptide_set": "d.[task]/extracted_spectra_peptides_merged;"}'/>
+    </block>
+
+</interface>
