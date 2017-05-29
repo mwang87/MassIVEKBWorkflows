@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<interface id="basicworkflow" version="1.2.5">
+    <workflow-id>LIBRARY_CREATION_AUGMENT_LIBRARY_TEST</workflow-id>
+    <workflow-label>LIBRARY_CREATION_AUGMENT_LIBRARY_TEST</workflow-label>
+
+    <!-- Parameter declarations -->
+    <parameters>
+        <!-- Universal parameters -->
+        <parameter name="desc" label="Description">
+            <validator type="length" maximum="1000"/>
+        </parameter>
+        <parameter name="email" label="Email">
+            <validator type="email"/>
+        </parameter>
+
+        <parameter name="fastadb" label="Proteome DB">
+            <fileGenerator type="upload" purpose="fasta" target="fastadb"/>
+            <default value="f.CCMS_ProteomeDatabases/uniprot/homo_sapiens/uniprot-human-swissprot-1_2_2017.fasta;"/>
+        </parameter>
+
+        <parameter name="existing_library_by_peptide_bins" label="existing_library_by_peptide_bins">
+			<fileGenerator type="upload" purpose="spectrum" target="existing_library_by_peptide_bins"/>
+            <default value="d.mwang87/data/Proteomics/PeptideLibraryCreation/LibraryMaterials;"/>
+		</parameter>
+
+        <parameter name="extracted_peaks_to_peptide_bins" label="new_extracted_peaks_to_peptide_bins">
+			<fileGenerator type="upload" purpose="spectrum" target="extracted_peaks_to_peptide_bins"/>
+		</parameter>
+
+        <parameter name="existing_peptide_set" label="existing_peptide_set">
+			<fileGenerator type="upload" purpose="spectrum" target="existing_peptide_set"/>
+            <default value="f.mwang87/data/Proteomics/PeptideLibraryCreation/LibraryMaterials/starting_extraction_peptide_list/peptide_list.tsv;"/>
+		</parameter>
+
+        <parameter name="new_peptide_set" label="new_peptide_set">
+			<fileGenerator type="upload" purpose="spectrum" target="new_peptide_set"/>
+		</parameter>
+
+        <parameter name="ConsensusChoice" label="ConsensusChoice">
+			<options>
+				<option value="Score"/>
+				<option value="Intensity"/>
+                <option value="MostSimilar"/>
+                <option value="Average"/>
+                <option value="MostSimilar_Combination_Score"/>
+			</options>
+			<validator type="set"/>
+            <default value="MostSimilar_Combination_Score"/>
+		</parameter>
+
+        <parameter name="FilterNoisePeaks" label="FilterNoisePeaks">
+			<options>
+				<option value="Yes"/>
+				<option value="No"/>
+			</options>
+			<validator type="set"/>
+		</parameter>
+
+        <parameter name="ProteinFDR" label="ProteinFDR">
+			<options>
+				<option value="Yes"/>
+				<option value="No"/>
+			</options>
+			<validator type="set"/>
+            <default value="Yes"/>
+		</parameter>
+
+
+
+        <!-- Parameters for Ambiguity -->
+        <parameter name="seq_on_server" label="Ambiguity Search Database">
+			<fileGenerator type="upload" purpose="sequence" target="ambiguityfasta"/>
+            <default value="f.CCMS_ProteomeDatabases/uniprot/homo_sapiens/uniprot-proteome_homo_sapiens_reference_proteome_5_23_2016.fasta;"/>
+		</parameter>
+
+        <parameter name="db.DB" label="Sequence Database">
+			<options resource="sequence"/>
+			<fileGenerator type="resource" resource="sequence" target="fasta"/>
+		</parameter>
+
+        <parameter name="db.contaminants" label="Include Common Contaminants"/>
+
+        <parameter name="instrument.instrument" label="Instrument">
+			<options>
+				<option value="ESI-ION-TRAP"/>
+				<option value="QTOF"/>
+				<option value="FT-HYBRID" label="High accuracy LTQ"/>
+			</options>
+			<validator type="set"/>
+		</parameter>
+
+        <parameter name="fragmentation.fragmentation" label="Fragmentation Method">
+			<options>
+				<option value="None" label="Specified in spectrum file"/>
+				<option value="CID"/>
+				<option value="ETD"/>
+				<option value="HCD"/>
+				<option value="Merge" label="Merge spectra from the same precursor"/>
+			</options>
+            <default value="HCD"/>
+			<validator type="set"/>
+		</parameter>
+		<parameter name="cysteine_protease.cysteine" label="Cysteine Protecting Group">
+			<options>
+				<option value="c57" label="Carbamidomethylation (+57)"/>
+				<option value="c58" label="Carboxymethylation (+58)"/>
+				<option value="c99" label="NIPIA/NIPCAM (+99)"/>
+				<option value="None"/>
+			</options>
+			<validator type="set"/>
+		</parameter>
+		<parameter name="cysteine_protease.protease" label="Protease">
+			<options>
+				<option value="Trypsin"/>
+				<option value="Chymotrypsin"/>
+				<option value="Lys-C"/>
+				<option value="Lys-N"/>
+				<option value="Arg-C"/>
+				<option value="Glu-C"/>
+				<option value="Asp-N"/>
+				<option value="None"/>
+			</options>
+            <default value="Trypsin"/>
+			<validator type="set"/>
+		</parameter>
+		<parameter name="c13_nnet.c13" label="Number of Allowed 13C">
+			<options>
+				<option value="0"/>
+				<option value="1"/>
+				<option value="2"/>
+			</options>
+			<default value="0"/>
+			<validator type="set"/>
+		</parameter>
+		<parameter name="c13_nnet.nnet" label="Number of Allowed Non-Enzymatic Termini">
+			<options>
+				<option value="0"/>
+				<option value="1"/>
+				<option value="2"/>
+			</options>
+			<default value="1"/>
+			<validator type="set"/>
+		</parameter>
+		<parameter name="tolerance.PM_tolerance" label="Parent Mass Tolerance">
+			<default value="10"/>
+			<processor type="concatenate" suffix="tolerance_unit.PM_unit"/>
+		</parameter>
+		<parameter name="tolerance_unit.PM_unit" label="Parent Mass Tolerance Units">
+			<options>
+				<option value="Da"/>
+				<option value="ppm"/>
+			</options>
+			<default value="ppm"/>
+			<validator type="set"/>
+		</parameter>
+		<!-- PTM parameters -->
+		<parameter name="ptm.mods" label="Maximum Number of PTMs Permitted in a Single Peptide">
+			<default value="1"/>
+			<validator type="integer" minimum="0"/>
+		</parameter>
+
+        <parameter name="ptm.DEAMIDATION">
+			<default value="on"/>
+		</parameter>
+        <parameter name="ptm.NTERM_ACETYLATION">
+			<default value="on"/>
+		</parameter>
+        <parameter name="ptm.NTERM_CARBAMYLATION">
+			<default value="on"/>
+		</parameter>
+        <parameter name="ptm.OXIDATION">
+			<default value="on"/>
+		</parameter>
+        <parameter name="ptm.PYROGLUTAMATE_FORMATION">
+			<default value="on"/>
+		</parameter>
+
+
+
+
+
+
+
+    </parameters>
+
+    <processors>
+		<processor type="sequence"/>
+		<processor type="ptm">
+			<property name="customize">DEAMIDATION</property>
+		</processor>
+		<processor type="msgfPlus"/>
+	</processors>
+
+    <block label="Extraction Selection">
+        <row>
+            <cell colspan="3">
+                <module id="augmentselection" type="augmentselection">
+                    <property name="property">property</property>
+                </module>
+            </cell>
+        </row>
+    </block>
+
+    <!-- Input form layout -->
+    <block label="File Selection">
+        <row>
+            <cell>
+                <label>
+                    <content parameter="fastadb"/>
+                </label>
+            </cell>
+            <cell colspan="3">
+                <module id="fastadb" type="fileSelector">
+                    <property name="label">Proteome DB</property>
+                </module>
+            </cell>
+        </row>
+
+
+        <row>
+			<cell>
+				<label>
+					<content parameter="existing_library_by_peptide_bins"/>
+				</label>
+			</cell>
+			<cell colspan="2">
+				<module id="existing_library_by_peptide_bins" type="fileSelector">
+					<property name="label">existing_library_by_peptide_bins</property>
+				</module>
+			</cell>
+		</row>
+        <row>
+			<cell>
+				<label>
+					<content parameter="extracted_peaks_to_peptide_bins"/>
+				</label>
+			</cell>
+			<cell colspan="2">
+				<module id="extracted_peaks_to_peptide_bins" type="fileSelector">
+					<property name="label">new_extracted_peaks_to_peptide_bins</property>
+				</module>
+			</cell>
+		</row>
+
+        <row>
+			<cell>
+				<label>
+					<content parameter="existing_peptide_set"/>
+				</label>
+			</cell>
+			<cell colspan="2">
+				<module id="existing_peptide_set" type="fileSelector">
+					<property name="label">existing_peptide_set</property>
+				</module>
+			</cell>
+		</row>
+        <row>
+			<cell>
+				<label>
+					<content parameter="new_peptide_set"/>
+				</label>
+			</cell>
+			<cell colspan="2">
+				<module id="new_peptide_set" type="fileSelector">
+					<property name="label">new_peptide_set</property>
+				</module>
+			</cell>
+		</row>
+
+    </block>
+
+    <block label="Library Consensus Parameters">
+        <row>
+            <cell>
+                <label>
+                    <content parameter="ConsensusChoice"/>
+                </label>
+            </cell>
+            <cell>
+                <input type="select" parameter="ConsensusChoice"/>
+            </cell>
+        </row>
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="FilterNoisePeaks"/>
+                </label>
+            </cell>
+            <cell>
+                <input type="select" parameter="FilterNoisePeaks"/>
+            </cell>
+        </row>
+
+        <row>
+            <cell>
+                <label>
+                    <content parameter="ProteinFDR"/>
+                </label>
+            </cell>
+            <cell>
+                <input type="select" parameter="ProteinFDR"/>
+            </cell>
+        </row>
+    </block>
+
+    <block label="Ambiguity Basic Search Parameters">
+        <row>
+			<cell colspan="4" align="center">
+				<label prefix="false">
+					<content><![CDATA[<span style="background-color:#D1EEEE;
+					padding:1px; border:2px inset blue">See
+					<a style="color:blue; font-weight:bold; font-size:105%;
+						background-color:#D1EEEE" target="_blank"
+						href="http://proteomics.ucsd.edu/Software/MSGFPlus.html">
+						here
+					</a> to learn more about MS-GF+.</span>]]></content>
+				</label>
+			</cell>
+		</row>
+		<row>
+			<cell>
+				<label>
+					<content parameter="instrument.instrument"/>
+					<tooltip id="hInstrument"/>
+				</label>
+			</cell>
+			<cell>
+				<input type="select" parameter="instrument.instrument"/>
+			</cell>
+			<cell>
+				<label>
+					<content parameter="fragmentation.fragmentation"/>
+					<tooltip id="hFragmentation"/>
+				</label>
+			</cell>
+			<cell>
+				<input type="select" parameter="fragmentation.fragmentation"/>
+			</cell>
+		</row>
+		<row>
+			<cell>
+				<label>
+					<content parameter="cysteine_protease.cysteine"/>
+					<tooltip id="hCysteine"/>
+				</label>
+			</cell>
+			<cell>
+				<input type="select" parameter="cysteine_protease.cysteine"/>
+			</cell>
+			<cell>
+				<label>
+					<content parameter="cysteine_protease.protease"/>
+					<tooltip id="hProtease"/>
+				</label>
+			</cell>
+			<cell>
+				<input type="select" parameter="cysteine_protease.protease"/>
+			</cell>
+		</row>
+		<row>
+			<cell>
+				<label>
+					<content>
+						<![CDATA[Number of Allowed <sup>13</sup>C]]>
+					</content>
+					<tooltip id="hC13"/>
+				</label>
+			</cell>
+			<cell>
+				<input type="select" parameter="c13_nnet.c13"/>
+			</cell>
+			<cell>
+				<label>
+					<content parameter="c13_nnet.nnet"/>
+					<tooltip id="hNnet"/>
+				</label>
+			</cell>
+			<cell>
+				<input type="select" parameter="c13_nnet.nnet"/>
+			</cell>
+		</row>
+		<row>
+			<cell>
+				<label>
+					<content parameter="tolerance.PM_tolerance"/>
+					<tooltip id="hParentMass"/>
+				</label>
+			</cell>
+			<cell colspan="3">
+				<input type="text" parameter="tolerance.PM_tolerance">
+					<attribute name="size" value="3"/>
+				</input>
+				<input type="select" parameter="tolerance_unit.PM_unit"/>
+			</cell>
+		</row>
+    </block>
+
+    <block label="Ambiguity Search Allowed Post-Translational Modifications">
+		<row>
+			<cell align="center">
+				<label>
+					<content parameter="ptm.mods"/>
+					<tooltip id="hMods"/>
+				</label>
+				<input type="text" parameter="ptm.mods">
+					<attribute name="size" value="3"/>
+				</input>
+			</cell>
+		</row>
+		<row>
+			<cell>
+				<module id="ptm" type="ptmTable">
+					<property name="types">fix,opt,fix_nterm,opt_nterm</property>
+					<property name="defaultType">opt</property>
+				</module>
+			</cell>
+		</row>
+	</block>
+
+    <block label="Ambiguity Search More Options">
+		<row>
+			<cell>
+				<label>
+					<content parameter="db.DB"/>
+					<tooltip id="hDatabase"/>
+				</label>
+			</cell>
+			<cell>
+				<input type="select" parameter="db.DB"/>
+			</cell>
+			<cell>
+				<input type="checkbox" parameter="db.contaminants"/>
+				<label>
+					<content parameter="db.contaminants"/>
+					<tooltip id="hContaminant"/>
+				</label>
+			</cell>
+		</row>
+		<row>
+			<cell>
+				<label>
+					<content parameter="seq_on_server"/>
+					<tooltip id="hAdditionalSeq"/>
+				</label>
+			</cell>
+			<cell colspan="2">
+				<module id="seq_on_server" type="fileSelector">
+					<property name="label">Ambiguity Sequence Files</property>
+				</module>
+			</cell>
+		</row>
+	</block>
+
+
+</interface>

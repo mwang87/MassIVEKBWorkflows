@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<interface id="speclib_add" version="1.2.3">
+    <download></download>
+
+    <view id="download_mgf_library" label="MGF Library" group="Downloads">
+        <blockRef id="main" type="download_mgf_library"/>
+    </view>
+    <block id="download_mgf_library" type="dummydownload">
+        <data>
+            <source type="file" name="spectrum_library_mgf/"/>
+            <parsers>
+                <parser type="stream" contentType="text/xml"/>
+            </parsers>
+        </data>
+    </block>
+
+    <view id="download_sptxt_library" label="sptxt Library" group="Downloads">
+        <blockRef id="main" type="download_sptxt_library"/>
+    </view>
+    <block id="download_sptxt_library" type="dummydownload">
+        <data>
+            <source type="file" name="spectrum_library_sptxt/"/>
+            <parsers>
+                <parser type="stream" contentType="text/xml"/>
+            </parsers>
+        </data>
+    </block>
+
+    <view id="download_filtered_mgf_library" label="Ambigutity Filtered MGF Library" group="Downloads">
+        <blockRef id="main" type="download_filtered_mgf_library"/>
+    </view>
+    <block id="download_filtered_mgf_library" type="dummydownload">
+        <data>
+            <source type="file" name="ambiguity_filtered_spectrum_library_mgf/"/>
+            <parsers>
+                <parser type="stream" contentType="text/xml"/>
+            </parsers>
+        </data>
+    </block>
+
+    <view id="download_filtered_sptxt_library" label="Ambigutity Filtered sptxt Library" group="Downloads">
+        <blockRef id="main" type="download_filtered_sptxt_library"/>
+    </view>
+    <block id="download_filtered_sptxt_library" type="dummydownload">
+        <data>
+            <source type="file" name="ambiguity_filtered_spectrum_library_sptxt/"/>
+            <parsers>
+                <parser type="stream" contentType="text/xml"/>
+            </parsers>
+        </data>
+    </block>
+
+    <view id="download_filtered_protein_filtered_mgf_library" label="Ambiguity Filtered 2+ Sequence Protein Filtered MGF Library" group="Downloads">
+        <blockRef id="main" type="download_filtered_protein_filtered_mgf_library"/>
+    </view>
+    <block id="download_filtered_protein_filtered_mgf_library" type="dummydownload">
+        <data>
+            <source type="file" name="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_mgf/"/>
+            <parsers>
+                <parser type="stream" contentType="text/xml"/>
+            </parsers>
+        </data>
+    </block>
+
+    <view id="download_filtered_protein_filtered_sptxt_library" label="Ambiguity Filtered 2+ Sequence Protein Filtered sptxt Library" group="Downloads">
+        <blockRef id="main" type="download_filtered_protein_filtered_sptxt_library"/>
+    </view>
+    <block id="download_filtered_protein_filtered_sptxt_library" type="dummydownload">
+        <data>
+            <source type="file" name="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_sptxt/"/>
+            <parsers>
+                <parser type="stream" contentType="text/xml"/>
+            </parsers>
+        </data>
+    </block>
+
+
+    <view id="protein_list" label="All Proteins" group="Proteins Results">
+        <blockRef id="main" type="protein_list"/>
+    </view>
+    <block id="protein_list" type="table_ss">
+        <data>
+            <source type="file" name="protein_fdr_and_stats/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="fdr" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="protein" label="protein" width="12"/>
+            <column type="float" field="fdr" label="fdr" precision="3"/>
+            <column type="float" field="score" label="score" precision="3"/>
+            <column type="integer" field="length" label="length"/>
+            <column type="integer" field="pe_number" label="pe_number"/>
+            <column type="integer" field="nextprot_pe_number" label="nextprot_pe_number"/>
+            <column type="integer" field="number_of_non_overlapping_sequences" label="number_of_non_overlapping_sequences"/>
+        </row>
+    </block>
+
+    <view id="view_all_peptide_mappings" label="View All Peptide Mappings" group="Peptide Results">
+        <blockRef id="main" type="view_all_peptide_mappings"/>
+    </view>
+    <block id="view_all_peptide_mappings" type="table_ss">
+        <data>
+            <source type="file" name="peptide_mapping/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="original_peptide" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="original_peptide" label="original_peptide" width="20"/>
+            <column type="text" field="il_peptide" label="il_peptide" width="20"/>
+            <column type="integer" field="charge" label="charge"/>
+            <column type="float" field="score" label="score" precision="3"/>
+            <column type="text" field="proteins_mapped" label="proteins_mapped" width="12"/>
+            <column type="text" field="proteins_mapped_mismatch" label="proteins_mapped_mismatch" width="12"/>
+            <column type="integer" field="number_proteins" label="number_proteins" width="12"/>
+            <column type="integer" field="number_proteins_mismatch" label="number_proteins_mismatch" width="12"/>
+        </row>
+    </block>
+
+
+
+    <view id="candidate_library_spectra" label="All Candidate library spectra" group="Provenance">
+        <blockRef id="main" type="candidate_library_spectra"/>
+    </view>
+    <block id="candidate_library_spectra" type="table_ss">
+        <data>
+            <source type="file" name="all_library_spectrum_candidates_file/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="annotation" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="annotation" label="annotation" width="12"/>
+            <column type="float" field="score" label="score" precision="3"/>
+            <column type="integer" field="charge" label="charge"/>
+            <column type="text" field="filename" label="filename" width="12"/>
+            <column type="integer" field="scan" label="scan"/>
+            <column type="float" field="most_similar_score" label="most_similar_score" precision="2"/>
+            <column type="float" field="ppm_error" label="ppm_error" precision="2"/>
+            <column type="float" field="explained_intensity" label="explained_intensity" precision="2"/>
+            <column label="View PSMs" type="genericurlgenerator" width="5">
+                <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/status.jsp"/>
+                <parameter name="REQUESTPARAMETER=task" value="[proteosafe_task]"/>
+                <parameter name="LABEL" value="View Original Search"/>
+            </column>
+            <column label="Spectra Extraction" type="genericurlgenerator" width="5">
+                <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/status.jsp"/>
+                <parameter name="REQUESTPARAMETER=task" value="[extract_task]"/>
+                <parameter name="LABEL" value="Extract Task"/>
+            </column>
+            <column label="Library Augment" type="genericurlgenerator" width="5">
+                <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/status.jsp"/>
+                <parameter name="REQUESTPARAMETER=task" value="[augment_task]"/>
+                <parameter name="LABEL" value="Augment Task"/>
+            </column>
+        </row>
+        <row expander="image">
+            <column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+                <parameter name="file" file="[filename]"/>
+                <parameter name="scan" value="[scan]"/>
+                <parameter name="peptide" value="[annotation]"/>
+                <parameter name="modformat" value="inspect"/>
+            </column>
+        </row>
+    </block>
+
+    <view id="view_all_search_tasks" label="View All Search Tasks" group="Provenance">
+        <blockRef id="main" type="view_all_search_tasks"/>
+    </view>
+    <block id="view_all_search_tasks" type="table_ss">
+        <data>
+            <source type="file" name="provenance_search_tasks_tsv/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="search_task_id" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="search_description" label="search_description"/>
+            <column label="View PSMs" type="genericurlgenerator" width="5">
+                <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/status.jsp"/>
+                <parameter name="REQUESTPARAMETER=task" value="[search_task_id]"/>
+                <parameter name="LABEL" value="View Original Search"/>
+            </column>
+            <column label="Spectra Extraction" type="genericurlgenerator" width="5">
+                <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/status.jsp"/>
+                <parameter name="REQUESTPARAMETER=task" value="[extract_task_id]"/>
+                <parameter name="LABEL" value="Extract Task"/>
+            </column>
+            <column label="Library Augment" type="genericurlgenerator" width="5">
+                <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/status.jsp"/>
+                <parameter name="REQUESTPARAMETER=task" value="[augment_task_id]"/>
+                <parameter name="LABEL" value="Augment Task"/>
+            </column>
+        </row>
+    </block>
+
+    <view id="view_all_library_augments" label="View All Library Augments" group="Provenance">
+        <blockRef id="main" type="view_all_library_augments"/>
+    </view>
+    <block id="view_all_library_augments" type="table_ss">
+        <data>
+            <source type="file" name="provenance_augment_tasks_tsv/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="extract_task" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column label="Spectra Extraction" type="genericurlgenerator" width="5">
+                <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/status.jsp"/>
+                <parameter name="REQUESTPARAMETER=task" value="[extract_task]"/>
+                <parameter name="LABEL" value="Extract Task"/>
+            </column>
+            <column label="Library Augment" type="genericurlgenerator" width="5">
+                <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/status.jsp"/>
+                <parameter name="REQUESTPARAMETER=task" value="[augment_task]"/>
+                <parameter name="LABEL" value="Augment Task"/>
+            </column>
+            <column type="text" field="timestamp" label="timestamp"/>
+        </row>
+    </block>
+
+    <view id="view_all_library_spectrum_files" label="View All Library Spectrum Files" group="Provenance">
+        <blockRef id="main" type="view_all_library_spectrum_files"/>
+    </view>
+    <block id="view_all_library_spectrum_files" type="table_ss">
+        <data>
+            <source type="file" name="provenance_spectrum_files_tsv/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="spectrum_filename" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="spectrum_filename" label="spectrum_filename"/>
+            <column type="text" field="search_description" label="search_description"/>
+            <column label="View Search" type="genericurlgenerator" width="5">
+                <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/status.jsp"/>
+                <parameter name="REQUESTPARAMETER=task" value="[search_task]"/>
+                <parameter name="LABEL" value="View Original Search"/>
+            </column>
+        </row>
+    </block>
+
+
+
+
+    <view id="filtered_peptide_list" label="All FDR Filtered Variants List Combined" group="Peptide Results">
+        <blockRef id="main" type="filtered_peptide_list"/>
+    </view>
+    <block id="filtered_peptide_list" type="table_ss">
+        <data>
+            <source type="file" name="filtered_peptide_list/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="score" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="variant_sequence" label="variant_sequence" width="12"/>
+            <column type="float" field="score" label="score" precision="3"/>
+            <column type="integer" field="decoy" label="decoy"/>
+            <column type="float" field="peptidefdr" label="peptidefdr" precision="4"/>
+            <column type="float" field="localpeptidefdr" label="localpeptidefdr" precision="4"/>
+            <column type="integer" field="numberpsms" label="numberpsms"/>
+            <column type="integer" field="length" label="length"/>
+        </row>
+    </block>
+
+    <view id="unfiltered_peptide_list" label="All FDR Unfiltered Variants List Combined" group="Peptide Results">
+        <blockRef id="main" type="unfiltered_peptide_list"/>
+    </view>
+    <block id="unfiltered_peptide_list" type="table_ss">
+        <data>
+            <source type="file" name="unfiltered_peptide_list/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="score" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="annotation" label="annotation" width="12"/>
+            <column type="text" field="annotation_key" label="annotation_key" width="20"/>
+            <column type="integer" field="charge" label="charge"/>
+            <column type="float" field="fdr" label="fdr" precision="2"/>
+            <column type="text" field="protein" label="protein"/>
+            <column type="float" field="score" label="score" precision="2"/>
+        </row>
+    </block>
+
+    <view id="library_view_split" label="Library Variants" group="View Library">
+        <blockRef id="main" type="library_view_split"/>
+    </view>
+    <block id="library_view_split" type="table_ss">
+        <data>
+            <source type="file" name="spectrum_library_tsv_splits_merged/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="charge" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="peptide" label="peptide" width="12"/>
+            <column type="integer" field="spectrumscan" label="spectrumscan"/>
+            <column type="integer" field="charge" label="charge"/>
+            <column type="text" field="protein" label="protein"/>
+            <column type="float" field="collision_energy" label="collision_energy" precision="1"/>
+            <column type="float" field="score" label="score" precision="2"/>
+            <column type="float" field="variant_score" label="variant_score" precision="2"/>
+            <column type="integer" field="num_spectra" label="num_spectra"/>
+            <column type="integer" field="spectrum_ranking" label="spectrum_ranking"/>
+            <column label="View PSMs" type="genericurlgenerator" width="5">
+                <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/status.jsp"/>
+                <parameter name="REQUESTPARAMETER=task" value="[proteosafe_task]"/>
+                <parameter name="LABEL" value="View Original Search"/>
+            </column>
+            <column type="text" field="originalfile_filename" label="filename"/>
+        </row>
+        <row expander="image">
+            <column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+                <parameter name="file" file="[mgf_filename]"/>
+                <parameter name="scan" value="[spectrumscan]"/>
+                <parameter name="peptide" value="[peptide]"/>
+                <parameter name="modformat" value="inspect"/>
+            </column>
+        </row>
+    </block>
+
+    <view id="ambiguity_library_view_split" label="Library Variants Ambiguity Filtered" group="View Library">
+        <blockRef id="main" type="ambiguity_library_view_split"/>
+    </view>
+    <block id="ambiguity_library_view_split" type="table_ss">
+        <data>
+            <source type="file" name="filtered_library_tsv_files_merged/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="charge" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="peptide" label="peptide" width="12"/>
+            <column type="integer" field="spectrumscan" label="spectrumscan"/>
+            <column type="integer" field="charge" label="charge"/>
+            <column type="text" field="protein" label="protein"/>
+            <column type="float" field="collision_energy" label="collision_energy" precision="1"/>
+            <column type="float" field="score" label="score" precision="2"/>
+            <column type="float" field="variant_score" label="variant_score" precision="2"/>
+            <column type="integer" field="num_spectra" label="num_spectra"/>
+            <column type="integer" field="spectrum_ranking" label="spectrum_ranking"/>
+        </row>
+        <row expander="image">
+            <column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+                <parameter name="file" file="[mgf_filename]"/>
+                <parameter name="scan" value="[spectrumscan]"/>
+                <parameter name="peptide" value="[peptide]"/>
+                <parameter name="modformat" value="inspect"/>
+            </column>
+        </row>
+    </block>
+
+    <view id="ambiguity_library_protein_filtered_view_split" label="Library Variants Ambiguity Filtered 2+ Sequence Protein Filtered" group="View Library">
+        <blockRef id="main" type="ambiguity_library_protein_filtered_view_split"/>
+    </view>
+    <block id="ambiguity_library_protein_filtered_view_split" type="table_ss">
+        <data>
+            <source type="file" name="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_tsv/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="charge" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="peptide" label="peptide" width="12"/>
+            <column type="integer" field="spectrumscan" label="spectrumscan"/>
+            <column type="integer" field="charge" label="charge"/>
+            <column type="text" field="protein" label="protein"/>
+            <column type="float" field="collision_energy" label="collision_energy" precision="1"/>
+            <column type="float" field="score" label="score" precision="2"/>
+            <column type="float" field="variant_score" label="variant_score" precision="2"/>
+            <column type="integer" field="num_spectra" label="num_spectra"/>
+            <column type="integer" field="spectrum_ranking" label="spectrum_ranking"/>
+        </row>
+        <row expander="image">
+            <column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+                <parameter name="file" file="[mgf_filename]"/>
+                <parameter name="scan" value="[spectrumscan]"/>
+                <parameter name="peptide" value="[peptide]"/>
+                <parameter name="modformat" value="inspect"/>
+            </column>
+        </row>
+    </block>
+
+    <view id="refined_ambiguity_of_peptides_merged" label="Ambiguity Library Results" group="Ambiguity">
+        <blockRef id="main" type="refined_ambiguity_of_peptides_merged"/>
+    </view>
+    <block id="refined_ambiguity_of_peptides_merged" type="table_ss">
+        <data>
+            <source type="file" name="refined_ambiguity_of_peptides_merged/"/>
+            <parsers>
+                <parser type="sortedTabular" sortBy="observed_annotations" operator="ascending"/>
+                <parser type="SQLite"/>
+            </parsers>
+        </data>
+        <row>
+            <column type="text" field="observed_annotations" label="observed_annotations" width="12"/>
+            <column type="text" field="library_peptide" label="library_peptide" width="12"/>
+            <column type="text" field="ambiguity_category" label="ambiguity_category" width="12"/>
+            <column type="text" field="alternative_peptide" label="alternative_peptide" width="12"/>
+        </row>
+    </block>
+
+    <view id="augment_dataset" label="Augment This Library" group="Library Augmentation">
+        <blockRef id="main" type="augment_dataset"/>
+    </view>
+    <block id="augment_dataset" type="dummylinkout">
+        <data>
+            <parsers>
+                <parser type="stream" contentType="text/xml"/>
+            </parsers>
+        </data>
+        <parameter name="URLBASE" value="http://proteomics2.ucsd.edu/ProteoSAFe/index.jsp"/>
+        <parameter name="REQUESTPARAMETER=params" value='{"workflow":"LIBRARY_CREATION_AUGMENT_LIBRARY_TEST","existing_library_by_peptide_bins":"d.[task]/all_existing_merged_extracted_spectra_folder;", "existing_peptide_set": "d.[task]/unfiltered_peptide_list;"}'/>
+    </block>
+
+</interface>

@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<binding>
+    <bind action="begin" type="download">
+        <url value="{livesearch.download}"/>
+        <query name="task" valueRef="@task" />
+        <query name="user" valueRef="@user"/>
+        <compression type="zip" />
+        <download port="flowParams" type="file">
+			<query name="resource" value="params"/>
+		</download>
+        <downloadParams>
+			<query name="resource" value="params"/>
+		</downloadParams>
+        <download port="fastadb" type="file">
+			<query name="resource" value="fastadb"/>
+		</download>
+        <download port="existing_library_by_peptide_bins" type="folder">
+			<query name="resource" value="existing_library_by_peptide_bins"/>
+		</download>
+        <download port="existing_peptide_set" type="folder">
+            <query name="resource" value="existing_peptide_set"/>
+        </download>
+        <download port="extracted_peaks_to_peptide_bins" type="folder">
+            <query name="resource" value="extracted_peaks_to_peptide_bins"/>
+        </download>
+        <download port="new_peptide_set" type="folder">
+            <query name="resource" value="new_peptide_set"/>
+        </download>
+        <download port="ambiguityfasta" type="folder">
+            <query name="resource" value="ambiguityfasta"/>
+        </download>
+    </bind>
+
+    <!-- Provenance -->
+
+    <bind action="generate_provenance_records" tool="generate_provenance_records">
+        <inputAsRequirement port="workflowParameters"       requirement="workflowParameters"/>
+        <productionToOutput port="provenance_json"    production="provenance_json"/>
+        <productionToOutput port="provenance_search_tasks_tsv"    production="provenance_search_tasks_tsv"/>
+        <productionToOutput port="provenance_augment_tasks_tsv"    production="provenance_augment_tasks_tsv"/>
+        <productionToOutput port="provenance_spectrum_files_tsv"    production="provenance_spectrum_files_tsv"/>
+    </bind>
+
+    <!-- Library Construction -->
+
+    <bind action="determine_peptide_set" tool="determine_peptide_set">
+        <inputAsRequirement port="workflowParameters"       requirement="workflowParameters"/>
+        <inputAsRequirement port="fastadb"       requirement="fastadb"/>
+        <inputAsRequirement port="existing_peptide_set"       requirement="existing_peptide_set"/>
+        <inputAsRequirement port="new_peptide_set"       requirement="new_peptide_set"/>
+        <productionToOutput port="length_score_cutoff_dict"    production="length_score_cutoff_dict"/>
+        <productionToOutput port="filtered_peptide_list"    production="filtered_peptide_list"/>
+        <productionToOutput port="unfiltered_peptide_list"    production="unfiltered_peptide_list"/>
+        <productionToOutput port="proteins_list"    production="proteins_list"/>
+    </bind>
+
+    <bind action="choose_consensus_create_params" tool="create_parallel_params">
+        <productionToOutput port="choose_consensus_params"    production="parallel_parameters"/>
+    </bind>
+
+    <bind action="choose_library_consensus_create_params" tool="choose_library_consensus_create_params">
+        <productionToOutput port="choose_library_consensus_params"    production="parallel_parameters"/>
+    </bind>
+
+
+
+    <bind action="merge_candidate_spectra_parallel" tool="merge_candidate_spectra_parallel">
+        <inputAsRequirement port="flowParams"       requirement="flowParams"/>
+        <inputAsRequirement port="choose_consensus_params"       requirement="choose_consensus_params"/>
+        <inputAsRequirement port="existing_library_by_peptide_bins"       requirement="existing_library_by_peptide_bins"/>
+        <inputAsRequirement port="extracted_peaks_to_peptide_bins"       requirement="extracted_peaks_to_peptide_bins"/>
+        <productionToOutput port="all_existing_merged_extracted_spectra_folder"           production="all_existing_merged_extracted_spectra_folder"/>
+    </bind>
+
+    <bind action="choose_library_spectra_parallel" tool="choose_library_spectra_parallel">
+        <inputAsRequirement port="flowParams"       requirement="flowParams"/>
+        <inputAsRequirement port="filtered_peptide_list"       requirement="filtered_peptide_list"/>
+        <inputAsRequirement port="length_score_cutoff_dict"       requirement="length_score_cutoff_dict"/>
+        <inputAsRequirement port="choose_library_consensus_params"       requirement="choose_library_consensus_params"/>
+        <inputAsRequirement port="provenance_json"       requirement="provenance_json"/>
+        <inputAsRequirement port="all_existing_merged_extracted_spectra_folder"       requirement="all_existing_merged_extracted_spectra_folder"/>
+        <productionToOutput port="all_library_consensus_spectra_folder"           production="all_library_consensus_spectra_folder"/>
+        <productionToOutput port="all_library_spectrum_candidates_folder"           production="all_library_spectrum_candidates_folder"/>
+        <productionToOutput port="spectrum_library_tsv_splits"           production="spectrum_library_tsv_splits"/>
+        <productionToOutput port="spectrum_library_mgf_splits"           production="spectrum_library_mgf_splits"/>
+        <productionToOutput port="spectrum_library_sptxt_splits"           production="spectrum_library_sptxt_splits"/>
+    </bind>
+
+
+
+
+    <bind action="library_evaluation_merge_step" tool="library_evaluation_merge_step">
+        <inputAsRequirement port="consensus_evaluation_results"       requirement="consensus_evaluation_results"/>
+        <productionToOutput port="consensus_evaluation_result_tsv"           production="consensus_evaluation_result_tsv"/>
+    </bind>
+
+    <bind action="library_evaluation_all_scores_merge_step" tool="library_evaluation_merge_step">
+        <inputAsRequirement port="consensus_evaluation_score_results"       requirement="consensus_evaluation_results"/>
+        <productionToOutput port="consensus_evaluation_score_result_tsv"           production="consensus_evaluation_result_tsv"/>
+    </bind>
+
+    <bind action="all_psms_stats" tool="merge_tsv_efficient">
+        <inputAsRequirement port="all_psm_evaluations_folder"       requirement="consensus_evaluation_results"/>
+        <productionToOutput port="all_psm_evaluations_file"           production="consensus_evaluation_result_tsv"/>
+    </bind>
+
+    <bind action="best_peptide_stats" tool="library_evaluation_merge_step">
+        <inputAsRequirement port="all_precursor_evaluations_folder"       requirement="consensus_evaluation_results"/>
+        <productionToOutput port="all_precursor_evaluations_file"           production="consensus_evaluation_result_tsv"/>
+    </bind>
+
+    <bind action="consolidate_spectral_library" tool="consolidate_spectral_library">
+        <inputAsRequirement port="all_library_consensus_spectra_folder"       requirement="all_library_spectrum_output_folder"/>
+        <productionToOutput port="spectrum_library_tsv"           production="spectrum_library_tsv"/>
+        <productionToOutput port="spectrum_library_mgf"           production="spectrum_library_mgf"/>
+        <productionToOutput port="spectrum_library_json"           production="spectrum_library_json"/>
+        <productionToOutput port="spectrum_library_sptxt"           production="spectrum_library_sptxt"/>
+    </bind>
+
+    <!-- <bind action="consolidate_spectral_library_parallel" tool="consolidate_spectral_library_parallel">
+        <inputAsRequirement port="all_library_consensus_spectra_folder"       requirement="all_library_spectrum_output_folder"/>
+        <productionToOutput port="spectrum_library_tsv_splits"           production="spectrum_library_tsv_splits"/>
+        <productionToOutput port="spectrum_library_mgf_splits"           production="spectrum_library_mgf_splits"/>
+        <productionToOutput port="spectrum_library_sptxt_splits"           production="spectrum_library_sptxt_splits"/>
+    </bind> -->
+
+    <bind action="merge_library_tsv_files" tool="merge_tsv_efficient">
+        <inputAsRequirement port="spectrum_library_tsv_splits"       requirement="input_folder"/>
+        <productionToOutput port="spectrum_library_tsv_splits_merged"           production="output_tsv"/>
+    </bind>
+
+    <bind action="merge_library_candidate_tsv_files" tool="merge_tsv_efficient">
+        <inputAsRequirement port="all_library_spectrum_candidates_folder"       requirement="input_folder"/>
+        <productionToOutput port="all_library_spectrum_candidates_file"           production="output_tsv"/>
+    </bind>
+
+    <bind action="merge_library_mgf_files" tool="merge_txt_files">
+        <inputAsRequirement port="input_folder"             requirement="input_folder"/>
+        <productionToOutput port="output_file"    production="output_file"/>
+    </bind>
+
+    <bind action="merge_library_sptxt_files" tool="merge_txt_files">
+        <inputAsRequirement port="input_folder"             requirement="input_folder"/>
+        <productionToOutput port="output_file"    production="output_file"/>
+    </bind>
+
+
+
+    <!-- Ambiguty Searching -->
+    <bind action="mergeSequences" tool="mergeFasta">
+		<inputAsRequirement port="fasta" requirement="input"/>
+		<productionToOutput port="out"   production="output"/>
+	</bind>
+
+    <bind action="buildSA" tool="MSGFPlus_BuildSA">
+		<inputAsRequirement port="fasta" requirement="input"/>
+		<productionToOutput port="out"   production="output"/>
+	</bind>
+
+    <bind action="msgfPlus_topk" tool="MSGFPlus">
+		<inputAsRequirement port="spec"   requirement="spectrum"/>
+		<inputAsRequirement port="fasta"  requirement="sequence"/>
+		<inputAsRequirement port="seq"    requirement="preparedSequence"/>
+		<inputAsRequirement port="params" requirement="parameters"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+	<bind action="msgfPlusConvert_topk" tool="MSGFPlus_ConvertToTSV">
+		<inputAsRequirement port="in"  requirement="input"/>
+		<productionToOutput port="out" production="output"/>
+	</bind>
+
+    <bind action="determine_cutoff_per_search_parallel" tool="determine_cutoff_per_search_parallel">
+        <inputAsRequirement port="original_library_identifications"             requirement="original_library_identifications"/>
+        <inputAsRequirement port="original_score_cutoff_parallel_params"             requirement="original_score_cutoff_parallel_params"/>
+        <productionToOutput port="original_score_cutoff_folder"    production="original_score_cutoff_folder"/>
+    </bind>
+
+    <bind action="determine_cutoff_per_search_merge" tool="determine_cutoff_per_search_merge">
+        <inputAsRequirement port="original_score_cutoff_folder"             requirement="original_score_cutoff_folder"/>
+        <productionToOutput port="original_score_cutoff_file"    production="original_score_cutoff_file"/>
+    </bind>
+
+    <bind action="refine_ambiguity_parallel_step" tool="refine_ambiguity_parallel_step">
+        <inputAsRequirement port="ambiguity_search_results"             requirement="ambiguity_search_results"/>
+        <inputAsRequirement port="ambiguity_search_param_xml"             requirement="ambiguity_search_param_xml"/>
+        <inputAsRequirement port="original_library_identifications"             requirement="original_library_identifications"/>
+        <inputAsRequirement port="original_score_cutoff_file"             requirement="original_score_cutoff_file"/>
+        <productionToOutput port="refined_ambiguity_of_peptides"    production="refined_ambiguity_of_peptides"/>
+    </bind>
+
+    <bind action="refine_ambiguity_merge_step" tool="merge_tsv_efficient">
+        <inputAsRequirement port="refined_ambiguity_of_peptides"             requirement="input_folder"/>
+        <productionToOutput port="refined_ambiguity_of_peptides_merged"    production="output_tsv"/>
+    </bind>
+
+    <bind action="filter_peptidelist_by_ambiguity" tool="filter_peptidelist_by_ambiguity">
+        <inputAsRequirement port="refined_ambiguity_of_peptides_merged"             requirement="refined_ambiguity_of_peptides_merged"/>
+        <inputAsRequirement port="peptidelist"             requirement="peptidelist"/>
+        <productionToOutput port="ambiguity_filtered_peptidelist"    production="ambiguity_filtered_peptidelist"/>
+    </bind>
+
+    <bind action="filter_library_spectra_parallel" tool="filter_library_spectra_parallel">
+        <inputAsRequirement port="ambiguity_filtered_peptidelist"             requirement="ambiguity_filtered_peptidelist"/>
+        <inputAsRequirement port="original_library_mgf_files"             requirement="original_library_mgf_files"/>
+        <productionToOutput port="filtered_library_mgf_files"    production="filtered_library_mgf_files"/>
+        <productionToOutput port="filtered_library_tsv_files"    production="filtered_library_tsv_files"/>
+        <productionToOutput port="filtered_library_sptxt_files"    production="filtered_library_sptxt_files"/>
+    </bind>
+
+    <bind action="filter_library_spectra_merge_step" tool="merge_tsv_efficient">
+        <inputAsRequirement port="filtered_library_tsv_files"             requirement="input_folder"/>
+        <productionToOutput port="filtered_library_tsv_files_merged"    production="output_tsv"/>
+    </bind>
+
+    <bind action="merge_filtered_library_mgf_files" tool="merge_mgf_library_files">
+        <inputAsRequirement port="input_folder" requirement="input_folder"/>
+        <inputAsRequirement port="protein_fdr_and_stats" requirement="protein_fdr_and_stats"/>
+        <inputAsRequirement port="peptide_mapping" requirement="peptide_mapping"/>
+        <productionToOutput port="output_mgf_folder" production="output_file"/>
+        <productionToOutput port="output_tsv" production="output_tsv"/>
+    </bind>
+
+    <bind action="merge_filtered_library_sptxt_files" tool="merge_txt_files">
+        <inputAsRequirement port="input_folder"             requirement="input_folder"/>
+        <productionToOutput port="output_file"    production="output_file"/>
+    </bind>
+
+    <bind action="merge_filtered_overlapping_protein_filtered_library_mgf_files" tool="merge_protein_filtering_mgf_library_files">
+        <inputAsRequirement port="input_folder" requirement="input_folder"/>
+        <inputAsRequirement port="protein_fdr_and_stats" requirement="protein_fdr_and_stats"/>
+        <inputAsRequirement port="peptide_mapping" requirement="peptide_mapping"/>
+        <productionToOutput port="output_mgf_folder" production="output_file"/>
+        <productionToOutput port="output_sptxt_folder" production="output_sptxt_folder"/>
+        <productionToOutput port="output_tsv" production="output_tsv"/>
+    </bind>
+
+
+    <!-- Protein Calling -->
+    <bind action="peptide_mapping" tool="peptide_mapping">
+        <inputAsRequirement port="peptidelist"             requirement="peptidelist"/>
+        <inputAsRequirement port="fastadb"             requirement="fastadb"/>
+        <inputAsRequirement port="params"             requirement="params"/>
+        <inputAsRequirement port="parallel_params"    requirement="parallel_params"/>
+		<productionToOutput port="intermediate_peptide_mapping"    production="intermediate_peptide_mapping"/>
+    </bind>
+
+    <bind action="peptide_mapping_to_protein_reduce" tool="peptide_mapping_to_protein_reduce">
+        <inputAsRequirement port="peptidelist"             requirement="peptidelist"/>
+        <inputAsRequirement port="fastadb"             requirement="fastadb"/>
+        <inputAsRequirement port="params"             requirement="params"/>
+        <inputAsRequirement port="intermediate_peptide_mapping"    requirement="intermediate_peptide_mapping"/>
+        <productionToOutput port="peptide_mapping"    production="peptide_mapping"/>
+    </bind>
+
+    <bind action="calculate_protein_fdr_and_stats" tool="calculate_protein_fdr_and_stats">
+        <inputAsRequirement port="peptide_mapping"             requirement="peptide_mapping"/>
+        <inputAsRequirement port="fastadb"             requirement="fastadb"/>
+        <productionToOutput port="protein_fdr_and_stats"    production="protein_fdr_and_stats"/>
+    </bind>
+
+
+    <bind action="end" type="upload">
+        <url value="{livesearch.upload}"/>
+        <query name="task" valueRef="@task"/>
+        <contentQuery name="content"/>
+        <compression type="zip"/>
+
+        <!-- For Download -->
+        <upload port="spectrum_library_mgf" type="folder">
+            <query name="resource" value="spectrum_library_mgf"/>
+        </upload>
+        <upload port="spectrum_library_sptxt" type="folder">
+            <query name="resource" value="spectrum_library_sptxt"/>
+        </upload>
+        <upload port="ambiguity_filtered_spectrum_library_mgf" type="folder">
+            <query name="resource" value="ambiguity_filtered_spectrum_library_mgf"/>
+        </upload>
+        <upload port="ambiguity_filtered_spectrum_library_sptxt" type="folder">
+            <query name="resource" value="ambiguity_filtered_spectrum_library_sptxt"/>
+        </upload>
+
+        <!-- Provenance -->
+        <upload port="provenance_search_tasks_tsv" type="file">
+            <query name="resource" value="provenance_search_tasks_tsv"/>
+        </upload>
+        <upload port="provenance_augment_tasks_tsv" type="file">
+            <query name="resource" value="provenance_augment_tasks_tsv"/>
+        </upload>
+        <upload port="provenance_spectrum_files_tsv" type="file">
+            <query name="resource" value="provenance_spectrum_files_tsv"/>
+        </upload>
+
+
+
+        <upload port="filtered_peptide_list" type="file">
+            <query name="resource" value="filtered_peptide_list"/>
+        </upload>
+        <upload port="unfiltered_peptide_list" type="file">
+            <query name="resource" value="unfiltered_peptide_list"/>
+        </upload>
+
+        <upload port="all_library_spectrum_candidates_file" type="file">
+            <query name="resource" value="all_library_spectrum_candidates_file"/>
+        </upload>
+        <upload port="all_existing_merged_extracted_spectra_folder" type="folder">
+            <query name="resource" value="all_existing_merged_extracted_spectra_folder"/>
+        </upload>
+
+        <upload port="spectrum_library_mgf_splits" type="folder">
+            <query name="resource" value="spectrum_library_mgf_splits"/>
+        </upload>
+        <upload port="spectrum_library_tsv_splits_merged" type="file">
+            <query name="resource" value="spectrum_library_tsv_splits_merged"/>
+        </upload>
+
+        <!-- Protein Mapping -->
+        <upload port="peptide_mapping" type="file">
+            <query name="resource" value="peptide_mapping"/>
+        </upload>
+        <upload port="protein_fdr_and_stats" type="file">
+            <query name="resource" value="protein_fdr_and_stats"/>
+        </upload>
+
+        <!-- Ambiguity -->
+        <upload port="refined_ambiguity_of_peptides_merged" type="file">
+            <query name="resource" value="refined_ambiguity_of_peptides_merged"/>
+        </upload>
+        <upload port="filtered_library_tsv_files_merged" type="file">
+            <query name="resource" value="filtered_library_tsv_files_merged"/>
+        </upload>
+        <upload port="filtered_library_mgf_files" type="file">
+            <query name="resource" value="filtered_library_mgf_files"/>
+        </upload>
+        <upload port="ambiguity_filtered_spectrum_library_tsv" type="file">
+            <query name="resource" value="ambiguity_filtered_spectrum_library_tsv"/>
+        </upload>
+
+
+        <!-- Library with 2+ Precursors -->
+        <upload port="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_mgf" type="folder">
+            <query name="resource" value="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_mgf"/>
+        </upload>
+        <upload port="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_tsv" type="folder">
+            <query name="resource" value="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_tsv"/>
+        </upload>
+        <upload port="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_sptxt" type="folder">
+            <query name="resource" value="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_sptxt"/>
+        </upload>
+
+
+
+        <!-- <upload port="consensus_evaluation_result_tsv" type="file">
+            <query name="resource" value="consensus_evaluation_result_tsv"/>
+        </upload>
+        <upload port="consensus_evaluation_score_result_tsv" type="file">
+            <query name="resource" value="consensus_evaluation_score_result_tsv"/>
+        </upload>
+        <upload port="all_psm_evaluations_file" type="file">
+            <query name="resource" value="all_psm_evaluations_file"/>
+        </upload>
+        <upload port="all_precursor_evaluations_file" type="file">
+            <query name="resource" value="all_precursor_evaluations_file"/>
+        </upload> -->
+
+        <!-- <upload port="spectrum_library_tsv" type="file">
+            <query name="resource" value="spectrum_library_tsv"/>
+        </upload>
+        <upload port="spectrum_library_mgf" type="file">
+            <query name="resource" value="spectrum_library_mgf"/>
+        </upload>
+        <upload port="spectrum_library_json" type="file">
+            <query name="resource" value="spectrum_library_json"/>
+        </upload>
+        <upload port="spectrum_library_sptxt" type="file">
+            <query name="resource" value="spectrum_library_sptxt"/>
+        </upload>
+
+        <upload port="spectrum_library_mgf_splits" type="folder">
+            <query name="resource" value="spectrum_library_mgf_splits"/>
+        </upload>
+        <upload port="spectrum_library_tsv_splits_merged" type="file">
+            <query name="resource" value="spectrum_library_tsv_splits_merged"/>
+        </upload>
+
+        <upload port="filtered_peptide_list" type="file">
+            <query name="resource" value="filtered_peptide_list"/>
+        </upload>
+        <upload port="unfiltered_peptide_list" type="file">
+            <query name="resource" value="unfiltered_peptide_list"/>
+        </upload>
+
+        <upload port="all_existing_merged_extracted_spectra_folder" type="folder">
+            <query name="resource" value="all_existing_merged_extracted_spectra_folder"/>
+        </upload>
+
+        <upload port="all_library_spectrum_candidates_file" type="file">
+            <query name="resource" value="all_library_spectrum_candidates_file"/>
+        </upload>
+
+        <upload port="proteins_list" type="file">
+            <query name="resource" value="proteins_list"/>
+        </upload> -->
+
+
+    </bind>
+</binding>

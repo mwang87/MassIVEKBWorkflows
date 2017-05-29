@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<flow name="spectral_creation_augment">
+	<object     name="workflowParameters"/>
+
+	<collection name="grab_external_task_results_parallel_parameters"/>
+	<collection name="original_task_summaries_parallel"/>
+	<collection name="task_peptide_results_parallel"/>
+	<collection name="task_psm_results_parallel"/>
+
+	<collection name="generate_spectra_to_extract_parallel_parameters"/>
+
+
+
+
+
+	<collection name="task_peptide_results"/>
+	<collection name="task_psm_results"/>
+
+	<object     name="filtered_combined_psm_results"/>
+	<object     name="filtered_combined_peptide_results"/>
+
+    <collection name="parallel_extract_spectra_params"/>
+
+	<object     name="original_task_summaries"/>
+
+	<collection name="parallel_bin_extracted_spectra_params"/>
+
+    <collection name="parallel_extract_spectra_psms"/>
+    <collection name="extracted_peaks"/>
+
+    <collection name="extracted_peaks_to_peptide_bins"/>
+    <collection name="existing_library_by_peptide_bins"/>
+
+    <collection name="consensus_evaluation_results"/>
+    <collection name="consensus_evaluation_score_results"/>
+    <collection name="all_psm_evaluations_folder"/>
+    <collection name="all_precursor_evaluations_folder"/>
+	<collection name="all_library_spectrum_output_folder"/>
+
+    <object name="consensus_evaluation_result_tsv"/>
+    <object name="consensus_evaluation_score_result_tsv"/>
+    <object name="all_psm_evaluations_file"/>
+    <object name="all_precursor_evaluations_file"/>
+
+	<object name="spectrum_library_tsv"/>
+	<object name="spectrum_library_mgf"/>
+	<object name="spectrum_library_json"/>
+	<object name="spectrum_library_sptxt"/>
+
+
+    <collection name="spectrum_library_tsv_splits"/>
+    <object name="spectrum_library_tsv_splits_merged"/>
+    <collection name="spectrum_library_mgf_splits"/>
+    <collection name="spectrum_library_sptxt_splits"/>
+
+    <collection name="input_library_one"/>
+
+    <object name="existing_peptide_set"/>
+    <object name="new_peptide_set"/>
+    <object name="filtered_peptide_list"/>
+    <object name="unfiltered_peptide_list"/>
+    <object name="length_score_cutoff_dict"/>
+
+    <object name="fastadb"/>
+    <object name="proteins_list"/>
+
+    <collection name="ambiguityfasta"/>
+
+	<action name="begin">
+		<output port="flowParams" object="workflowParameters"/>
+        <output port="existing_library_by_peptide_bins" 		  collection="existing_library_by_peptide_bins"/>
+        <output port="existing_peptide_set" 		  object="existing_peptide_set"/>
+        <output port="extracted_peaks_to_peptide_bins" 		  collection="extracted_peaks_to_peptide_bins"/>
+        <output port="new_peptide_set" 		  object="new_peptide_set"/>
+        <output port="fastadb" 		  object="fastadb"/>
+        <output port="ambiguityfasta"  collection="ambiguityfasta"/>
+	</action>
+
+    <!-- Provenance -->
+
+    <object name="provenance_json"/>
+    <object name="provenance_search_tasks_tsv"/>
+    <object name="provenance_augment_tasks_tsv"/>
+    <object name="provenance_spectrum_files_tsv"/>
+    <action name="generate_provenance_records">
+		<input port="workflowParameters" object="workflowParameters"/>
+        <output port="provenance_json"       object="provenance_json"/>
+        <output port="provenance_search_tasks_tsv"       object="provenance_search_tasks_tsv"/>
+        <output port="provenance_augment_tasks_tsv"       object="provenance_augment_tasks_tsv"/>
+        <output port="provenance_spectrum_files_tsv"       object="provenance_spectrum_files_tsv"/>
+    </action>
+
+    <!-- Library Construction -->
+
+    <action name="determine_peptide_set">
+		<input port="workflowParameters" object="workflowParameters"/>
+        <input  port="fastadb"             object="fastadb"/>
+		<input port="existing_peptide_set" object="existing_peptide_set"/>
+        <input port="new_peptide_set" object="new_peptide_set"/>
+        <output port="length_score_cutoff_dict"       object="length_score_cutoff_dict"/>
+        <output port="filtered_peptide_list"       object="filtered_peptide_list"/>
+        <output port="unfiltered_peptide_list"       object="unfiltered_peptide_list"/>
+        <output port="proteins_list"       object="proteins_list"/>
+    </action>
+
+    <collection name="choose_consensus_params"/>
+    <action name="choose_consensus_create_params">
+		<input port="workflowParameters" object="workflowParameters"/>
+        <output port="choose_consensus_params"       collection="choose_consensus_params"/>
+    </action>
+
+    <collection name="all_library_spectrum_candidates_folder"/>
+
+    <collection name="all_existing_merged_extracted_spectra_folder"/>
+    <action name="merge_candidate_spectra_parallel" multiplicity="multiple" type="parallel">
+        <input  port="flowParams"             object="workflowParameters"/>
+        <input  port="choose_consensus_params"             object="choose_consensus_params" transformation="unfolding"/>
+        <input  port="existing_library_by_peptide_bins"             collection="existing_library_by_peptide_bins"/>
+		<input  port="extracted_peaks_to_peptide_bins"             collection="extracted_peaks_to_peptide_bins"/>
+        <output port="all_existing_merged_extracted_spectra_folder"           collection="all_existing_merged_extracted_spectra_folder"/>
+	</action>
+
+    <collection name="choose_library_consensus_params"/>
+    <action name="choose_library_consensus_create_params">
+		<input port="workflowParameters" object="workflowParameters"/>
+        <output port="choose_library_consensus_params"       collection="choose_library_consensus_params"/>
+    </action>
+
+    <collection name="all_library_consensus_spectra_folder"/>
+    <action name="choose_library_spectra_parallel" multiplicity="multiple" type="parallel">
+        <input  port="flowParams"             object="workflowParameters"/>
+        <input  port="filtered_peptide_list"             object="filtered_peptide_list"/>
+        <input  port="length_score_cutoff_dict"             object="length_score_cutoff_dict"/>
+        <input  port="choose_library_consensus_params"             object="choose_library_consensus_params" transformation="unfolding"/>
+        <input  port="all_existing_merged_extracted_spectra_folder"             collection="all_existing_merged_extracted_spectra_folder"/>
+        <input  port="provenance_json"             object="provenance_json"/>
+        <output port="all_library_consensus_spectra_folder"           collection="all_library_consensus_spectra_folder"/>
+        <output port="all_library_spectrum_candidates_folder"           collection="all_library_spectrum_candidates_folder"/>
+        <output port="spectrum_library_tsv_splits" collection="spectrum_library_tsv_splits"/>
+		<output port="spectrum_library_mgf_splits" collection="spectrum_library_mgf_splits"/>
+        <output port="spectrum_library_sptxt_splits" collection="spectrum_library_sptxt_splits"/>
+	</action>
+
+
+    <object name="all_library_spectrum_candidates_file"/>
+    <action name="merge_library_candidate_tsv_files">
+		<input  port="all_library_spectrum_candidates_folder" collection="all_library_spectrum_candidates_folder"/>
+		<output port="all_library_spectrum_candidates_file" object="all_library_spectrum_candidates_file"/>
+	</action>
+
+    <action name="merge_library_tsv_files">
+		<input  port="spectrum_library_tsv_splits" collection="spectrum_library_tsv_splits"/>
+		<output port="spectrum_library_tsv_splits_merged" object="spectrum_library_tsv_splits_merged"/>
+	</action>
+
+    <collection name="spectrum_library_mgf"/>
+    <action name="merge_library_mgf_files">
+		<input  port="input_folder" collection="spectrum_library_mgf_splits"/>
+		<output port="output_file" collection="spectrum_library_mgf"/>
+	</action>
+
+    <collection name="spectrum_library_sptxt"/>
+    <action name="merge_library_sptxt_files">
+		<input  port="input_folder" collection="spectrum_library_sptxt_splits"/>
+		<output port="output_file" collection="spectrum_library_sptxt"/>
+	</action>
+
+
+
+
+    <!-- Doing Ambiguity Searching -->
+    <object		name="mergedSequence"/>
+    <action name="mergeSequences">
+		<input  port="fasta" collection="ambiguityfasta"/>
+		<output port="out"   collection="mergedSequence"/>
+	</action>
+
+    <object		name="preparedSequence"/>
+    <action name="buildSA">
+		<input  port="fasta" object="mergedSequence"/>
+		<output port="out"   object="preparedSequence"/>
+	</action>
+
+    <collection		name="mzidResult"/>
+    <action name="msgfPlus_topk" multiplicity="multiple" type="parallel">
+		<input  port="spec"   collection="spectrum_library_mgf_splits" transformation="unfolding"/>
+		<input  port="fasta"  object="mergedSequence"/>
+		<input  port="seq"    object="preparedSequence"/>
+		<input  port="params" object="workflowParameters"/>
+		<output port="out"    collection="mzidResult"/>
+	</action>
+
+    <collection		name="msgfPlusResult"/>
+    <action name="msgfPlusConvert_topk" multiplicity="multiple" type="parallel">
+		<input  port="in"  collection="mzidResult" transformation="unfolding"/>
+		<output port="out" collection="msgfPlusResult"/>
+	</action>
+
+
+    <collection name="original_score_cutoff_folder"/>
+    <action name="determine_cutoff_per_search_parallel" multiplicity="multiple" type="parallel">
+		<input port="original_library_identifications" object="spectrum_library_tsv_splits_merged"/>
+		<input port="original_score_cutoff_parallel_params" collection="choose_consensus_params" transformation="unfolding"/>
+        <output port="original_score_cutoff_folder"       collection="original_score_cutoff_folder"/>
+    </action>
+
+    <object name="original_score_cutoff_file"/>
+    <action name="determine_cutoff_per_search_merge">
+		<input port="original_score_cutoff_folder" collection="original_score_cutoff_folder"/>
+        <output port="original_score_cutoff_file"       object="original_score_cutoff_file"/>
+    </action>
+
+    <collection name="refined_ambiguity_of_peptides"/>
+    <action name="refine_ambiguity_parallel_step" multiplicity="multiple" type="parallel">
+        <input  port="ambiguity_search_results"             collection="msgfPlusResult" transformation="unfolding"/>
+        <input  port="ambiguity_search_param_xml"             object="workflowParameters"/>
+        <input  port="original_library_identifications"             object="spectrum_library_tsv_splits_merged"/>
+		<input  port="original_score_cutoff_file"             object="original_score_cutoff_file"/>
+        <output port="refined_ambiguity_of_peptides"       collection="refined_ambiguity_of_peptides"/>
+    </action>
+
+    <object name="refined_ambiguity_of_peptides_merged"/>
+    <action name="refine_ambiguity_merge_step">
+        <input  port="refined_ambiguity_of_peptides" collection="refined_ambiguity_of_peptides"/>
+        <output port="refined_ambiguity_of_peptides_merged" object="refined_ambiguity_of_peptides_merged"/>
+    </action>
+
+    <object name="ambiguity_filtered_peptidelist"/>
+    <action name="filter_peptidelist_by_ambiguity">
+        <input  port="refined_ambiguity_of_peptides_merged" object="refined_ambiguity_of_peptides_merged"/>
+        <input  port="peptidelist" object="spectrum_library_tsv_splits_merged"/>
+        <output port="ambiguity_filtered_peptidelist" object="ambiguity_filtered_peptidelist"/>
+    </action>
+
+    <collection name="filtered_library_mgf_files"/>
+    <collection name="filtered_library_tsv_files"/>
+    <collection name="filtered_library_sptxt_files"/>
+    <action name="filter_library_spectra_parallel" multiplicity="multiple" type="parallel">
+        <input  port="ambiguity_filtered_peptidelist" object="ambiguity_filtered_peptidelist"/>
+        <input  port="original_library_mgf_files" collection="spectrum_library_mgf_splits" transformation="unfolding"/>
+        <output port="filtered_library_mgf_files" collection="filtered_library_mgf_files"/>
+        <output port="filtered_library_tsv_files" collection="filtered_library_tsv_files"/>
+        <output port="filtered_library_sptxt_files" collection="filtered_library_sptxt_files"/>
+    </action>
+
+    <object name="filtered_library_tsv_files_merged"/>
+    <action name="filter_library_spectra_merge_step">
+        <input  port="filtered_library_tsv_files" collection="filtered_library_tsv_files"/>
+        <output port="filtered_library_tsv_files_merged" object="filtered_library_tsv_files_merged"/>
+    </action>
+
+    <collection name="ambiguity_filtered_spectrum_library_mgf"/>
+	<collection name="ambiguity_filtered_spectrum_library_tsv"/>
+    <action name="merge_filtered_library_mgf_files">
+		<input  port="input_folder" collection="filtered_library_mgf_files"/>
+		<input  port="protein_fdr_and_stats" object="protein_fdr_and_stats"/>
+		<input  port="peptide_mapping" object="peptide_mapping"/>
+		<output port="output_mgf_folder" collection="ambiguity_filtered_spectrum_library_mgf"/>
+		<output port="output_tsv" collection="ambiguity_filtered_spectrum_library_tsv"/>
+	</action>
+
+    <collection name="ambiguity_filtered_spectrum_library_sptxt"/>
+    <action name="merge_filtered_library_sptxt_files">
+		<input  port="input_folder" collection="filtered_library_sptxt_files"/>
+		<output port="output_file" collection="ambiguity_filtered_spectrum_library_sptxt"/>
+	</action>
+
+	<!-- Output Library -->
+	<collection name="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_mgf"/>
+	<collection name="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_sptxt"/>
+	<collection name="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_tsv"/>
+    <action name="merge_filtered_overlapping_protein_filtered_library_mgf_files">
+		<input  port="input_folder" collection="filtered_library_mgf_files"/>
+		<input  port="protein_fdr_and_stats" object="protein_fdr_and_stats"/>
+		<input  port="peptide_mapping" object="peptide_mapping"/>
+		<output port="output_mgf_folder" collection="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_mgf"/>
+		<output port="output_sptxt_folder" collection="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_sptxt"/>
+		<output port="output_tsv" collection="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_tsv"/>
+	</action>
+
+
+    <!-- Protein Calling -->
+    <collection name="intermediate_peptide_mapping"/>
+    <action name="peptide_mapping" multiplicity="multiple" type="parallel">
+		<input port="parallel_params"       collection="choose_library_consensus_params"  transformation="unfolding"/>
+        <input  port="peptidelist"             object="filtered_library_tsv_files_merged"/>
+        <input  port="fastadb"             object="fastadb"/>
+        <input  port="params"             object="workflowParameters"/>
+        <output port="intermediate_peptide_mapping"       collection="intermediate_peptide_mapping"/>
+    </action>
+
+    <object name="peptide_mapping"/>
+    <action name="peptide_mapping_to_protein_reduce">
+		<input  port="peptidelist"             object="spectrum_library_tsv_splits_merged"/>
+        <input  port="fastadb"             object="fastadb"/>
+        <input  port="params"             object="workflowParameters"/>
+		<input port="intermediate_peptide_mapping"       collection="intermediate_peptide_mapping"/>
+        <output port="peptide_mapping"       object="peptide_mapping"/>
+    </action>
+
+    <object name="protein_fdr_and_stats"/>
+    <action name="calculate_protein_fdr_and_stats">
+        <input  port="peptide_mapping"             object="peptide_mapping"/>
+        <input  port="fastadb"             object="fastadb"/>
+        <output port="protein_fdr_and_stats"       object="protein_fdr_and_stats"/>
+    </action>
+
+
+	<action name="end">
+        <!-- For Download -->
+        <input port="spectrum_library_mgf"           collection="spectrum_library_mgf"/>
+        <input port="spectrum_library_sptxt"           collection="spectrum_library_sptxt"/>
+
+        <input port="ambiguity_filtered_spectrum_library_mgf"           collection="ambiguity_filtered_spectrum_library_mgf"/>
+        <input port="ambiguity_filtered_spectrum_library_sptxt"           collection="ambiguity_filtered_spectrum_library_sptxt"/>
+
+        <!-- For Display -->
+        <input port="filtered_peptide_list"           object="filtered_peptide_list"/>
+        <input port="unfiltered_peptide_list"           object="unfiltered_peptide_list"/>
+
+        <input port="all_library_spectrum_candidates_file"           object="all_library_spectrum_candidates_file"/>
+        <input port="all_existing_merged_extracted_spectra_folder"           collection="all_existing_merged_extracted_spectra_folder"/>
+
+        <input port="spectrum_library_mgf_splits"           collection="spectrum_library_mgf_splits"/>
+        <input port="spectrum_library_tsv_splits_merged"           object="spectrum_library_tsv_splits_merged"/>
+
+        <!-- Provenance -->
+        <input port="provenance_search_tasks_tsv"           object="provenance_search_tasks_tsv"/>
+        <input port="provenance_augment_tasks_tsv"           object="provenance_augment_tasks_tsv"/>
+		<input port="provenance_spectrum_files_tsv"           object="provenance_spectrum_files_tsv"/>
+
+
+
+
+        <!-- Ambiguty Outputs -->
+        <input port="refined_ambiguity_of_peptides_merged"           object="refined_ambiguity_of_peptides_merged"/>
+        <input port="filtered_library_mgf_files"           collection="filtered_library_mgf_files"/>
+        <input port="filtered_library_tsv_files_merged"           object="filtered_library_tsv_files_merged"/>
+		<input port="ambiguity_filtered_spectrum_library_mgf"           collection="ambiguity_filtered_spectrum_library_mgf"/>
+		<input port="ambiguity_filtered_spectrum_library_tsv"           object="ambiguity_filtered_spectrum_library_tsv"/>
+
+		<!-- Library with 2+ Precursors -->
+		<input port="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_mgf"           collection="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_mgf"/>
+		<input port="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_tsv"           collection="ambiguity_filtered_overlapping_protein_filtered_spectrum_library_tsv"/>
+
+
+
+        <!-- Protein Mapping and Peptide Stats -->
+        <input port="peptide_mapping"       object="peptide_mapping"/>
+        <input port="protein_fdr_and_stats"       object="protein_fdr_and_stats"/>
+
+        <!--
+		<input port="spectrum_library_tsv"           object="spectrum_library_tsv"/>
+		<input port="spectrum_library_mgf"           object="spectrum_library_mgf"/>
+		<input port="spectrum_library_json"           object="spectrum_library_json"/>
+		<input port="spectrum_library_sptxt"           object="spectrum_library_sptxt"/>
+
+        <input port="spectrum_library_mgf_splits"           collection="spectrum_library_mgf_splits"/>
+        <input port="spectrum_library_tsv_splits_merged"           object="spectrum_library_tsv_splits_merged"/>
+
+        <input port="filtered_peptide_list"           object="filtered_peptide_list"/>
+        <input port="unfiltered_peptide_list"           object="unfiltered_peptide_list"/>
+
+        <input port="all_existing_merged_extracted_spectra_folder"           collection="all_existing_merged_extracted_spectra_folder"/>
+        <input port="all_library_spectrum_candidates_folder"           collection="all_library_spectrum_candidates_folder"/>
+
+        <input port="all_library_spectrum_candidates_file"           object="all_library_spectrum_candidates_file"/>
+
+        <input port="refined_ambiguity_of_peptides"           collection="refined_ambiguity_of_peptides"/>
+
+        <input port="ambiguity_filtered_peptidelist"           object="ambiguity_filtered_peptidelist"/>
+        <input port="filtered_library_tsv_files_merged"           object="filtered_library_tsv_files_merged"/>
+
+
+        <input port="proteins_list"           object="proteins_list"/> -->
+
+	</action>
+</flow>

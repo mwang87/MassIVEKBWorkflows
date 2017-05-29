@@ -1,0 +1,488 @@
+<toolset>
+    <pathSet base="library_creation_augment_library">
+        <pathVar name="determine_peptide_set.script" path="determine_library_peptide_set.py" />
+        <toolPath tool="create_parallel_params" path="parallel_paramgen.py" />
+        <toolPath tool="choose_library_consensus_create_params" path="parallel_paramgen.py" />
+
+        <pathVar name="merge_candidate_spectra_parallel.script" path="merge_candidate_spectra_parallel.py" />
+        <pathVar name="choose_library_spectra_parallel.script" path="choose_library_spectra_parallel.py" />
+
+        <pathVar name="merge_tsv_efficient.script" path="merge_tsv_files_efficient.py" />
+        <pathVar name="consolidate_spectral_library.script" path="consolidate_spectral_library.py" />
+        <pathVar name="consolidate_spectral_library_parallel.script" path="consolidate_spectral_library_parallel.py" />
+        <pathVar name="nextprotpelevels.file" path="NextProt_PEs.txt" />
+
+        <pathVar name="merge_txt_files.script" path="merge_txt_files.py" />
+        <pathVar name="merge_mgf_library_files.script" path="merge_mgf_remap_library.py" />
+        <pathVar name="merge_protein_filtering_mgf_library_files.script" path="merge_mgf_remap_library_filter_highquality_proteins.py" />
+
+
+    </pathSet>
+
+    <pathSet base="library_creation_choosing_consensus">
+        <pathVar name="library_evaluation_merge_step.script" path="merge_tsv_to_tsv.py" />
+    </pathSet>
+
+    <pathSet base="anaconda3">
+        <toolPath tool="determine_peptide_set" path="bin/python3.5" />
+        <toolPath tool="choose_evaluate_consensus_parallel_step" path="bin/python3.5" />
+        <toolPath tool="merge_candidate_spectra_parallel" path="bin/python3.5" />
+        <toolPath tool="choose_library_spectra_parallel" path="bin/python3.5" />
+        <toolPath tool="library_evaluation_merge_step" path="bin/python3.5" />
+        <toolPath tool="consolidate_spectral_library" path="bin/python3.5" />
+        <toolPath tool="consolidate_spectral_library_parallel" path="bin/python3.5" />
+        <toolPath tool="merge_tsv_efficient" path="bin/python3.5" />
+        <toolPath tool="merge_txt_files" path="bin/python3.5" />
+        <toolPath tool="merge_mgf_library_files" path="bin/python3.5" />
+        <toolPath tool="merge_protein_filtering_mgf_library_files" path="bin/python3.5" />
+    </pathSet>
+
+    <tool name="determine_peptide_set">
+        <require name="workflowParameters" type="file"/>
+        <require name="fastadb" type="file"/>
+        <require name="existing_peptide_set" type="file"/>
+        <require name="new_peptide_set" type="file"/>
+        <produce name="filtered_peptide_list"        type="file"  naming="explicit"  extension="tsv"/>
+        <produce name="unfiltered_peptide_list"        type="file"  naming="explicit"  extension="tsv"/>
+        <produce name="length_score_cutoff_dict"        type="file"  naming="explicit"  extension="json"/>
+        <produce name="proteins_list"        type="file"  naming="explicit"  extension="tsv"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="determine_peptide_set.script"/>
+            <arg valueRef="workflowParameters"/>
+            <arg valueRef="existing_peptide_set"/>
+            <arg valueRef="new_peptide_set"/>
+            <arg valueRef="fastadb"/>
+            <arg valueRef="filtered_peptide_list"/>
+            <arg valueRef="unfiltered_peptide_list"/>
+            <arg valueRef="length_score_cutoff_dict"/>
+            <arg valueRef="proteins_list"/>
+            <arg pathRef="nextprotpelevels.file"/>
+        </execution>
+    </tool>
+
+
+    <tool name="create_parallel_params">
+        <produce name="parallel_parameters"        type="folder"/>
+
+        <execution env="binary" argConvention="adhoc">
+                <arg valueRef="parallel_parameters"/>
+                <arg value="75"/>
+        </execution>
+    </tool>
+
+    <tool name="choose_library_consensus_create_params">
+        <produce name="parallel_parameters"        type="folder"/>
+
+        <execution env="binary" argConvention="adhoc">
+                <arg valueRef="parallel_parameters"/>
+                <arg value="150"/>
+        </execution>
+    </tool>
+
+
+
+
+    <tool name="merge_candidate_spectra_parallel">
+        <require name="flowParams" type="file"/>
+        <require name="choose_consensus_params" type="file"/>
+        <require name="existing_library_by_peptide_bins" type="folder"/>
+        <require name="extracted_peaks_to_peptide_bins" type="folder"/>
+        <produce name="all_existing_merged_extracted_spectra_folder" type="folder"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="merge_candidate_spectra_parallel.script"/>
+            <arg valueRef="flowParams"/>
+            <arg valueRef="choose_consensus_params"/>
+            <arg valueRef="existing_library_by_peptide_bins"/>
+            <arg valueRef="extracted_peaks_to_peptide_bins"/>
+            <arg valueRef="all_existing_merged_extracted_spectra_folder"/>
+        </execution>
+    </tool>
+
+    <tool name="choose_library_spectra_parallel">
+        <require name="flowParams" type="file"/>
+        <require name="filtered_peptide_list" type="file"/>
+        <require name="length_score_cutoff_dict" type="file"/>
+        <require name="choose_library_consensus_params" type="file"/>
+        <require name="provenance_json" type="file"/>
+        <require name="all_existing_merged_extracted_spectra_folder" type="folder"/>
+        <produce name="all_library_consensus_spectra_folder" type="folder"/>
+        <produce name="all_library_spectrum_candidates_folder" type="folder"/>
+        <produce name="spectrum_library_tsv_splits" type="folder"/>
+        <produce name="spectrum_library_mgf_splits" type="folder"/>
+        <produce name="spectrum_library_sptxt_splits" type="folder"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="choose_library_spectra_parallel.script"/>
+            <arg valueRef="flowParams"/>
+            <arg valueRef="choose_library_consensus_params"/>
+            <arg valueRef="filtered_peptide_list"/>
+            <arg valueRef="length_score_cutoff_dict"/>
+            <arg valueRef="provenance_json"/>
+            <arg valueRef="all_existing_merged_extracted_spectra_folder"/>
+            <arg valueRef="all_library_consensus_spectra_folder"/>
+            <arg valueRef="all_library_spectrum_candidates_folder"/>
+
+            <arg valueRef="spectrum_library_tsv_splits"/>
+            <arg valueRef="spectrum_library_mgf_splits"/>
+            <arg valueRef="spectrum_library_sptxt_splits"/>
+        </execution>
+    </tool>
+
+    <tool name="library_evaluation_merge_step">
+        <require name="consensus_evaluation_results" type="folder"/>
+        <produce name="consensus_evaluation_result_tsv" type="file" naming="explicit"  extension="tsv"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="library_evaluation_merge_step.script"/>
+            <arg valueRef="consensus_evaluation_results"/>
+            <arg valueRef="consensus_evaluation_result_tsv"/>
+        </execution>
+    </tool>
+
+    <tool name="merge_tsv_efficient">
+        <require name="input_folder" type="folder"/>
+        <produce name="output_tsv" type="file" naming="explicit"  extension="tsv"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="merge_tsv_efficient.script"/>
+            <arg valueRef="input_folder"/>
+            <arg valueRef="output_tsv"/>
+        </execution>
+    </tool>
+
+    <tool name="merge_txt_files">
+        <require name="input_folder" type="folder"/>
+        <produce name="output_file" type="folder"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="merge_txt_files.script"/>
+            <arg valueRef="input_folder"/>
+            <arg valueRef="output_file"/>
+        </execution>
+    </tool>
+
+    <tool name="merge_mgf_library_files">
+        <require name="input_folder" type="folder"/>
+        <require name="protein_fdr_and_stats" type="file"/>
+        <require name="peptide_mapping" type="file"/>
+        <produce name="output_file" type="folder"/>
+        <produce name="output_tsv" type="folder"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="merge_mgf_library_files.script"/>
+            <arg valueRef="input_folder"/>
+            <arg valueRef="protein_fdr_and_stats"/>
+            <arg valueRef="peptide_mapping"/>
+            <arg valueRef="output_file"/>
+            <arg valueRef="output_tsv"/>
+            <arg value="ambiguity_filtered_peptide_library"/>
+        </execution>
+    </tool>
+
+    <tool name="merge_protein_filtering_mgf_library_files">
+        <require name="input_folder" type="folder"/>
+        <require name="protein_fdr_and_stats" type="file"/>
+        <require name="peptide_mapping" type="file"/>
+        <produce name="output_file" type="folder"/>
+        <produce name="output_sptxt_folder" type="folder"/>
+        <produce name="output_tsv" type="folder"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="merge_protein_filtering_mgf_library_files.script"/>
+            <arg valueRef="input_folder"/>
+            <arg valueRef="protein_fdr_and_stats"/>
+            <arg valueRef="peptide_mapping"/>
+            <arg valueRef="output_file"/>
+            <arg valueRef="output_tsv"/>
+            <arg valueRef="output_sptxt_folder"/>
+            <arg value="ambiguity_filtered_overlapping_protein_filtered_peptide_library"/>
+        </execution>
+    </tool>
+
+
+
+
+
+
+
+
+
+    <tool name="consolidate_spectral_library">
+        <require name="all_library_spectrum_output_folder" type="folder"/>
+        <produce name="spectrum_library_tsv" type="file" naming="explicit"  extension="tsv"/>
+        <produce name="spectrum_library_mgf" type="file" naming="explicit"  extension="mgf"/>
+        <produce name="spectrum_library_json" type="file" naming="explicit"  extension="json"/>
+        <produce name="spectrum_library_sptxt" type="file" naming="explicit"  extension="sptxt"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="consolidate_spectral_library.script"/>
+            <arg valueRef="all_library_spectrum_output_folder"/>
+            <arg valueRef="spectrum_library_tsv"/>
+            <arg valueRef="spectrum_library_mgf"/>
+            <arg valueRef="spectrum_library_json"/>
+            <arg valueRef="spectrum_library_sptxt"/>
+        </execution>
+    </tool>
+
+    <tool name="consolidate_spectral_library_parallel">
+        <require name="all_library_spectrum_output_folder" type="file"/>
+        <produce name="spectrum_library_tsv_splits" type="folder"/>
+        <produce name="spectrum_library_mgf_splits" type="folder"/>
+        <produce name="spectrum_library_sptxt_splits" type="folder"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="consolidate_spectral_library_parallel.script"/>
+            <arg valueRef="all_library_spectrum_output_folder"/>
+            <arg valueRef="spectrum_library_tsv_splits"/>
+            <arg valueRef="spectrum_library_mgf_splits"/>
+            <arg valueRef="spectrum_library_sptxt_splits"/>
+        </execution>
+    </tool>
+
+
+
+    <!-- Library Ambiguity Search -->
+    <pathSet base="MSGFPlus/10089">
+    	<toolPath tool="MSGFPlus_BuildSA"      path="MSGFPlus.jar"/>
+    	<toolPath tool="MSGFPlus"              path="MSGFPlus.py"/>
+    	<toolPath tool="MSGFPlus_ConvertToTSV" path="MSGFPlus.jar"/>
+    </pathSet>
+
+    <tool name="MSGFPlus_BuildSA">
+    	<require name="input"  type="file" datatype="fasta"/>
+    	<produce name="output" type="file" datatype="msgfDBSeq"/>
+
+    	<execution env="java" argConvention="adhoc">
+    		<mainClass name="edu.ucsd.msjava.msdbsearch.BuildSA"/>
+    		<envArg option="Xmx6000M"/>
+    		<arg option="d"   valueRef="input"/>
+    		<arg option="o"   valueRef="output"/>
+    		<arg option="tda" value="1"/>
+    	</execution>
+    </tool>
+
+    <tool name="MSGFPlus">
+    	<require name="spectrum"         type="file" datatype="spectrum"/>
+    	<require name="sequence"         type="file" datatype="fasta"/>
+    	<require name="preparedSequence" type="file" datatype="msgfDBSeq"/>
+    	<require name="parameters"       type="file"/>
+    	<produce name="output"           type="file" naming="explicit" extension="mzid"/>
+
+    	<execution env="python" argConvention="posix">
+    		<arg value="-Xmx12000M"/>
+    		<arg option="s"          valueRef="spectrum"/>
+    		<arg option="d"          valueRef="sequence"/>
+    		<arg option="dd"         valueRef="preparedSequence"/>
+    		<arg option="o"          valueRef="output"/>
+    		<arg option="t"          valueRef="@tolerance.PM_tolerance_tolerance_unit.PM_unit"/>
+    		<arg option="tda"        value="1"/>
+    		<arg option="m"          valueRef="@fragmentation.fragmentation" mapAgainst="fragmentationMethod"/>
+    		<arg option="inst"       valueRef="@instrument.instrument"       mapAgainst="instrument"/>
+    		<arg option="e"          valueRef="@cysteine_protease.protease"  mapAgainst="protease"/>
+    		<arg option="ti"         valueRef="@c13_nnet.msgfPlusC13"/>
+    		<arg option="ntt"        valueRef="@c13_nnet.msgfPlusNnet"/>
+    		<arg option="mod"        valueRef="parameters"/>
+    		<arg option="thread"     value="2"/>
+    		<arg option="n"     value="20"/>
+    		<!-- <arg option="showQValue" value="0"/> -->
+    		<!-- <arg option="replicate"  value="1"/> -->
+    	</execution>
+    </tool>
+
+    <tool name="MSGFPlus_ConvertToTSV">
+    	<require name="input"  type="file"/>
+    	<produce name="output" type="file" naming="explicit" extension="tsv"/>
+
+    	<execution env="java" argConvention="gnu">
+    		<mainClass name="edu.ucsd.msjava.ui.MzIDToTsv"/>
+    		<envArg option="Xmx10000M"/>
+    		<arg option="i"          valueRef="input"/>
+    		<arg option="o"          valueRef="output"/>
+    		<arg option="showQValue" value="0"/>
+    		<arg option="showDecoy"  value="1"/>
+    		<arg option="unroll"     value="1"/>
+    	</execution>
+    </tool>
+
+    <pathSet base="library_creation_augment_library">
+        <pathVar name="refine_ambiguity_parallel_step.script" path="refine_ambiguity_parallel_step.py" />
+    </pathSet>
+
+    <pathSet base="library_creation_ambiguity_resolution">
+        <pathVar name="determine_cutoff_per_search_parallel.script" path="determine_cutoff_per_search_parallel.py" />
+        <pathVar name="determine_cutoff_per_search_merge.script" path="determine_cutoff_per_search_merge.py" />
+
+        <pathVar name="filter_peptidelist_by_ambiguity.script" path="filter_peptidelist_by_ambiguity.py" />
+        <pathVar name="filter_library_spectra_parallel.script" path="filter_library_spectra_parallel.py" />
+    </pathSet>
+
+    <pathSet base="anaconda3">
+        <toolPath tool="determine_cutoff_per_search_parallel" path="bin/python3.5" />
+        <toolPath tool="determine_cutoff_per_search_merge" path="bin/python3.5" />
+        <toolPath tool="refine_ambiguity_parallel_step" path="bin/python3.5" />
+        <toolPath tool="filter_peptidelist_by_ambiguity" path="bin/python3.5" />
+        <toolPath tool="filter_library_spectra_parallel" path="bin/python3.5" />
+    </pathSet>
+
+    <tool name="determine_cutoff_per_search_parallel">
+        <require name="original_library_identifications"        type="file"/>
+        <require name="original_score_cutoff_parallel_params"        type="file"/>
+        <produce name="original_score_cutoff_folder"        type="file" naming="explicit"  extension="json"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="determine_cutoff_per_search_parallel.script"/>
+            <arg valueRef="original_score_cutoff_parallel_params"/>
+            <arg valueRef="original_library_identifications"/>
+            <arg valueRef="original_score_cutoff_folder"/>
+        </execution>
+    </tool>
+
+    <tool name="determine_cutoff_per_search_merge">
+        <require name="original_score_cutoff_folder"        type="folder"/>
+        <produce name="original_score_cutoff_file"        type="file" naming="explicit"  extension="json"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="determine_cutoff_per_search_merge.script"/>
+            <arg valueRef="original_score_cutoff_folder"/>
+            <arg valueRef="original_score_cutoff_file"/>
+        </execution>
+    </tool>
+
+    <tool name="refine_ambiguity_parallel_step">
+        <require name="ambiguity_search_results"       type="file"/>
+        <require name="ambiguity_search_param_xml" type="file"/>
+        <require name="original_library_identifications"    type="file"/>
+        <require name="original_score_cutoff_file"    type="file"/>
+        <produce name="refined_ambiguity_of_peptides"        type="folder"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="refine_ambiguity_parallel_step.script"/>
+            <arg valueRef="ambiguity_search_results"/>
+            <arg valueRef="ambiguity_search_param_xml"/>
+            <arg valueRef="original_library_identifications"/>
+            <arg valueRef="original_score_cutoff_file"/>
+            <arg valueRef="refined_ambiguity_of_peptides"/>
+        </execution>
+    </tool>
+
+    <tool name="filter_peptidelist_by_ambiguity">
+        <require name="refined_ambiguity_of_peptides_merged"       type="file"/>
+        <require name="peptidelist" type="file"/>
+        <produce name="ambiguity_filtered_peptidelist" type="file" naming="explicit"  extension="tsv"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="filter_peptidelist_by_ambiguity.script"/>
+            <arg valueRef="refined_ambiguity_of_peptides_merged"/>
+            <arg valueRef="peptidelist"/>
+            <arg valueRef="ambiguity_filtered_peptidelist"/>
+        </execution>
+    </tool>
+
+    <tool name="filter_library_spectra_parallel">
+        <require name="ambiguity_filtered_peptidelist"       type="file"/>
+        <require name="original_library_mgf_files" type="file"/>
+        <produce name="filtered_library_mgf_files"    type="file" naming="explicit"  extension="mgf"/>
+        <produce name="filtered_library_tsv_files"        type="file" naming="explicit"  extension="tsv"/>
+        <produce name="filtered_library_sptxt_files"        type="file" naming="explicit"  extension="sptxt"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="filter_library_spectra_parallel.script"/>
+            <arg valueRef="ambiguity_filtered_peptidelist"/>
+            <arg valueRef="original_library_mgf_files"/>
+            <arg valueRef="filtered_library_mgf_files"/>
+            <arg valueRef="filtered_library_tsv_files"/>
+            <arg valueRef="filtered_library_sptxt_files"/>
+        </execution>
+    </tool>
+
+
+    <!-- Protein Mapping -->
+    <pathSet base="protein_calling">
+        <pathVar name="peptide_mapping.script" path="peptide_mapping.py" />
+        <pathVar name="peptide_mapping_to_protein_reduce.script" path="peptide_mapping_to_protein_reduce.py" />
+        <pathVar name="calculate_protein_fdr_and_stats.script" path="calculate_protein_fdr_and_stats.py" />
+        <pathVar name="nextprotpelevels.file" path="NextProt_PEs.txt" />
+    </pathSet>
+
+    <pathSet base="anaconda3">
+        <toolPath tool="peptide_mapping" path="bin/python3.5" />
+        <toolPath tool="peptide_mapping_to_protein_reduce" path="bin/python3.5" />
+        <toolPath tool="calculate_protein_fdr_and_stats" path="bin/python3.5" />
+    </pathSet>
+
+    <tool name="peptide_mapping">
+        <require name="peptidelist"       type="file"/>
+        <require name="fastadb" type="file"/>
+        <require name="params"    type="file"/>
+        <require name="parallel_params"    type="file"/>
+        <produce name="intermediate_peptide_mapping"        type="folder"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="peptide_mapping.script"/>
+            <arg valueRef="fastadb"/>
+            <arg valueRef="peptidelist"/>
+            <arg valueRef="parallel_params"/>
+            <arg valueRef="intermediate_peptide_mapping"/>
+        </execution>
+    </tool>
+
+
+    <tool name="peptide_mapping_to_protein_reduce">
+        <require name="peptidelist"       type="file"/>
+        <require name="fastadb" type="file"/>
+        <require name="params"    type="file"/>
+        <require name="intermediate_peptide_mapping"    type="folder"/>
+        <produce name="peptide_mapping"        type="file" naming="explicit"  extension="out"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="peptide_mapping_to_protein_reduce.script"/>
+            <arg valueRef="peptidelist"/>
+            <arg valueRef="fastadb"/>
+            <arg valueRef="intermediate_peptide_mapping"/>
+            <arg valueRef="peptide_mapping"/>
+        </execution>
+    </tool>
+
+    <tool name="calculate_protein_fdr_and_stats">
+        <require name="peptide_mapping"       type="file"/>
+        <require name="fastadb" type="file"/>
+        <produce name="protein_fdr_and_stats"        type="file" naming="explicit"  extension="tsv"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="calculate_protein_fdr_and_stats.script"/>
+            <arg valueRef="peptide_mapping"/>
+            <arg valueRef="fastadb"/>
+            <arg valueRef="protein_fdr_and_stats"/>
+            <arg pathRef="nextprotpelevels.file"/>
+        </execution>
+    </tool>
+
+    <!-- Provenance -->
+    <pathSet base="library_creation_augment_library">
+        <pathVar name="generate_provenance_records.script" path="determine_library_workflow_proveance.py" />
+    </pathSet>
+
+    <pathSet base="anaconda3">
+        <toolPath tool="generate_provenance_records" path="bin/python3.5" />
+    </pathSet>
+
+    <tool name="generate_provenance_records">
+        <require name="workflowParameters"       type="file"/>
+        <produce name="provenance_json"        type="file" naming="explicit"  extension="json"/>
+        <produce name="provenance_search_tasks_tsv"        type="file" naming="explicit"  extension="tsv"/>
+        <produce name="provenance_augment_tasks_tsv"        type="file" naming="explicit"  extension="tsv"/>
+        <produce name="provenance_spectrum_files_tsv"        type="file" naming="explicit"  extension="tsv"/>
+
+        <execution env="binary" argConvention="adhoc">
+            <arg pathRef="generate_provenance_records.script"/>
+            <arg valueRef="workflowParameters"/>
+            <arg valueRef="provenance_json"/>
+            <arg valueRef="provenance_search_tasks_tsv"/>
+            <arg valueRef="provenance_augment_tasks_tsv"/>
+            <arg valueRef="provenance_spectrum_files_tsv"/>
+        </execution>
+    </tool>
+
+</toolset>
