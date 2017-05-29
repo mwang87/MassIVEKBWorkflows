@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<flow name="multipass_msgf_plus_db_search">
+	<!-- User-provided input files -->
+	<collection	name="spectrum"/>
+	<collection	name="sequence"/>
+	<!-- ProteoSAFe params.xml -->
+	<object		name="parameters"/>
+	<!-- Intermediate workflow output files -->
+	<object		name="mergedSequence"/>
+	<object	    name="preparedSequence"/>
+	<collection	name="mzidResult"/>
+	<collection	name="msgfPlusResult"/>
+	<object		name="mergedResult"/>
+	<object     name="convertParameters"/>
+	<collection name="convertedMzTab"/>
+	<collection name="validatedMzTab"/>
+	<!-- Final workflow result files -->
+	<collection name="cleanedMzTab"/>
+	<object		name="statistics"/>
+
+	<!-- Actions -->
+	<action name="begin">
+		<output port="spec"   collection="spectrum"/>
+		<output port="fasta"  collection="sequence"/>
+		<output port="params" object="parameters"/>
+	</action>
+
+	<action name="mergeSequences">
+		<input  port="fasta" collection="sequence"/>
+		<output port="out"   object="mergedSequence"/>
+	</action>
+
+	<action name="buildSA">
+		<input  port="fasta" object="mergedSequence"/>
+		<output port="out"   object="preparedSequence"/>
+	</action>
+
+	<action name="msgfPlus" multiplicity="multiple" type="parallel">
+		<input  port="spec"   collection="spectrum" transformation="unfolding"/>
+		<input  port="fasta"  object="mergedSequence"/>
+		<input  port="seq"    object="preparedSequence"/>
+		<input  port="params" object="parameters"/>
+		<output port="out"    collection="mzidResult"/>
+	</action>
+
+	<action name="msgfPlusConvert" multiplicity="multiple" type="parallel">
+		<input  port="in"  collection="mzidResult" transformation="unfolding"/>
+		<output port="out" collection="msgfPlusResult"/>
+	</action>
+
+	<action name="merge">
+		<input  port="result"       collection="msgfPlusResult"/>
+		<output port="mergedResult" object="mergedResult"/>
+	</action>
+
+	<action name="fdr">
+		<input  port="in"  object="mergedResult"/>
+		<output port="out" object="tsvResult"/>
+	</action>
+
+    <!-- KL Divergence -->
+    <object     name="kl_output"/>
+    <collection name="kl_scratch"/>
+
+    <action name="generate_kl_divergence">
+        <input  port="parameters" object="parameters"/>
+		<input  port="spectrum"   collection="spectrum"/>
+		<output port="kl_scratch" object="kl_scratch"/>
+        <output port="kl_output"  object="kl_output"/>
+	</action>
+
+	<!-- Two Pass -->
+	<!-- This will create a peptide list at 1% FDR, all Peptides at all FDRs and then find all proteins that are  -->
+	<!-- covered by these 1% FDR peptides and then give more stats about them -->
+    <!-- Two Pass Stuff -->
+	<object		name="secondpassproteins"/>
+	<object		name="secondpassproteins_list"/>
+    <object		name="secondpassfasta"/>
+    <object	    name="preparedSequence_secondpass"/>
+	<collection	name="mzidResult_secondpass"/>
+	<collection	name="msgfPlusResult_secondpass"/>
+	<object		name="mergedResult_secondpass"/>
+	<object		name="firstpass_peptides"/>
+	<object		name="secondpass_peptides"/>
+	<object		name="firstpass_only_unique_peptides"/>
+	<object		name="firstpass_only_peptides_full_results"/>
+	<object		name="first_pass_protein_stats_table"/>
+	<object		name="library_coverage_summary_statistics"/>
+	<object		name="original_psms"/>
+    <object		name="updated_eval_psms"/>
+	<object		name="original_eval_psms_high_fdr"/>
+	<object		name="updated_eval_psms_high_fdr"/>
+
+	<action name="generate_first_pass_peptides">
+		<input  port="searchresults"                        collection="mergedResult"/>
+		<output port="firstpass_only_unique_peptides"       object="firstpass_only_unique_peptides"/>
+		<output port="firstpass_only_peptides_full_results" object="firstpass_only_peptides_full_results"/>
+	</action>
+
+	<action name="first_pass_proteins_mapping_stats">
+		<input  port="inputfasta"                     object="mergedSequence"/>
+		<input  port="searchresults"                  collection="mergedResult"/>
+		<output port="first_pass_protein_stats_table" object="first_pass_protein_stats_table"/>
+	</action>
+
+	<action name="generate_second_pass_proteins">
+		<input  port="inputfasta"              object="mergedSequence"/>
+		<input  port="searchresults"           collection="mergedResult"/>
+		<output port="secondpassproteins"      object="secondpassproteins"/>
+		<output port="secondpassproteins_list" object="secondpassproteins_list"/>
+	</action>
+
+    <action name="generate_second_pass_fasta">
+		<input  port="inputfasta"         object="mergedSequence"/>
+		<input  port="secondpassproteins" collection="secondpassproteins"/>
+		<output port="secondpassfasta"    object="secondpassfasta"/>
+	</action>
+
+    <!-- Two Pass MSGF Portion-->
+    <action name="buildSA_secondpass">
+		<input  port="fasta" object="secondpassfasta"/>
+		<output port="out"   object="preparedSequence_secondpass"/>
+	</action>
+
+	<action name="msgfPlus_secondpass" multiplicity="multiple" type="parallel">
+		<input  port="spec"   collection="spectrum" transformation="unfolding"/>
+		<input  port="fasta"  object="secondpassfasta"/>
+		<input  port="seq"    object="preparedSequence_secondpass"/>
+		<input  port="params" object="parameters"/>
+		<output port="out"    collection="mzidResult_secondpass"/>
+	</action>
+
+	<action name="msgfPlusConvert_secondpass" multiplicity="multiple" type="parallel">
+		<input  port="in"  collection="mzidResult_secondpass" transformation="unfolding"/>
+		<output port="out" collection="msgfPlusResult_secondpass"/>
+	</action>
+
+	<action name="merge_secondpass">
+		<input  port="result"       collection="msgfPlusResult_secondpass"/>
+		<output port="mergedResult" object="mergedResult_secondpass"/>
+	</action>
+
+	<action name="reconcile_evalue">
+		<input  port="mergedResult"                collection="mergedResult"/>
+		<input  port="mergedResult_secondpass"     collection="mergedResult_secondpass"/>
+		<input  port="mergedSequence"              collection="mergedSequence"/>
+		<input  port="secondpassproteins"          collection="secondpassproteins"/>
+		<output port="firstpass_peptides"          object="firstpass_peptides"/>
+		<output port="secondpass_peptides"         object="secondpass_peptides"/>
+		<output port="original_psms"               object="original_psms"/>
+        <output port="updated_eval_psms"           object="updated_eval_psms"/>
+		<output port="original_eval_psms_high_fdr" object="original_eval_psms_high_fdr"/>
+		<output port="updated_eval_psms_high_fdr"  object="updated_eval_psms_high_fdr"/>
+	</action>
+
+	<action name="proteome_statistics_summary">
+		<input  port="peptidelist"                         object="firstpass_only_unique_peptides"/>
+        <input  port="fastadb"                             object="mergedSequence"/>
+        <output port="library_coverage_summary_statistics" object="library_coverage_summary_statistics"/>
+    </action>
+
+    <!-- Merging KL -->
+    <object		name="updated_eval_psms_with_kl"/>
+    <action name="add_kl_to_updated_eval_psms">
+        <input  port="parameters"                object="parameters"/>
+		<input  port="updated_eval_psms"         object="updated_eval_psms"/>
+        <input  port="kl_output"                 object="kl_output"/>
+        <output port="updated_eval_psms_with_kl" object="updated_eval_psms_with_kl"/>
+    </action>
+
+	<object		name="updated_eval_psms_with_kl_with_ambiguity"/>
+    <action name="add_ambiguity_to_psms">
+		<input  port="updated_eval_psms_with_kl"                object="updated_eval_psms_with_kl"/>
+        <input  port="spectrum"                                 collection="spectrum"/>
+        <output port="updated_eval_psms_with_kl_with_ambiguity" object="updated_eval_psms_with_kl_with_ambiguity"/>
+    </action>
+
+	<object		name="updated_eval_psms_with_kl_with_ambiguity_filtered"/>
+    <action name="filter">
+		<input  port="updated_eval_psms_with_kl_with_ambiguity"          object="updated_eval_psms_with_kl_with_ambiguity"/>
+        <output port="updated_eval_psms_with_kl_with_ambiguity_filtered" object="updated_eval_psms_with_kl_with_ambiguity_filtered"/>
+    </action>
+
+	<action name="createConvertConfig">
+		<input  port="input"  object="updated_eval_psms_with_kl_with_ambiguity_filtered"/>
+		<input  port="params" object="parameters"/>
+		<output port="output" object="convertParameters"/>
+	</action>
+
+	<action name="convertTSVToMzTab">
+		<input  port="tsv"            object="updated_eval_psms_with_kl_with_ambiguity_filtered"/>
+		<input  port="convertParams"  object="convertParameters"/>
+		<output port="mzTab"          collection="convertedMzTab"/>
+	</action>
+
+	<action name="validateMzTab">
+		<input  port="params" object="parameters"/>
+		<input  port="mzTab"  collection="convertedMzTab"/>
+		<input  port="peak"   collection="spectrum"/>
+		<output port="out"    collection="validatedMzTab"/>
+	</action>
+
+	<action name="cleanMzTab">
+		<input  port="params" object="parameters"/>
+		<input  port="mzTab"  collection="validatedMzTab"/>
+		<input  port="peak"   collection="spectrum"/>
+		<output port="out"    collection="cleanedMzTab"/>
+	</action>
+
+	<action name="summarizeMzTab">
+		<input  port="params" object="parameters"/>
+		<input  port="mzTab"  collection="cleanedMzTab"/>
+		<output port="out"    object="statistics"/>
+	</action>
+
+	<action name="end">
+		<input port="tsv"                                      object="tsvResult"/>
+		<input port="secondpassproteins"                       object="secondpassproteins"/>
+        <input port="secondpassfasta"                          object="secondpassfasta"/>
+        <input port="mergedResult"                             object="mergedResult"/>
+        <input port="mergedResult_secondpass"                  object="mergedResult_secondpass"/>
+		<input port="firstpass_peptides"                       object="firstpass_peptides"/>
+		<input port="secondpass_peptides"                      object="secondpass_peptides"/>
+		<input port="secondpassproteins_list"                  object="secondpassproteins_list"/>
+		<input port="firstpass_only_unique_peptides"           object="firstpass_only_unique_peptides"/>
+		<input port="firstpass_only_peptides_full_results"     object="firstpass_only_peptides_full_results"/>
+		<input port="library_coverage_summary_statistics"      object="library_coverage_summary_statistics"/>
+		<input port="first_pass_protein_stats_table"           object="first_pass_protein_stats_table"/>
+        <input port="kl_output"                                object="kl_output"/>
+        <input port="updated_eval_psms_with_kl"                object="updated_eval_psms_with_kl"/>
+		<input port="updated_eval_psms_with_kl_with_ambiguity" object="updated_eval_psms_with_kl_with_ambiguity_filtered"/>
+		<input port="original_psms"                            object="original_psms"/>
+		<input port="updated_eval_psms"                        object="updated_eval_psms"/>
+		<input port="original_eval_psms_high_fdr"              object="original_eval_psms_high_fdr"/>
+		<input port="updated_eval_psms_high_fdr"               object="updated_eval_psms_high_fdr"/>
+		<input port="mzTab"                                    collection="cleanedMzTab"/>
+		<input port="statistics"                               object="statistics"/>
+	</action>
+</flow>

@@ -1,0 +1,982 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<interface id="multipass_msgf_plus_db_search" version="1.2.9">
+	<!-- Result files that should always be downloaded -->
+	
+	<!-- BEGIN standard mzTab result view specifications -->
+	<view id="view_result_list" label="Browse mzTab Result Files">
+		<blockRef id="main" type="file_list"/>
+	</view>
+	<block id="file_list" type="table">
+		<data>
+			<source type="file" name="statistics/"/>
+			<parsers>
+				<parser type="tabular"/>
+			</parsers>
+		</data>
+		<row>
+			<column type="text"                                    field="Uploaded_file"    label="Result File"                 width="12"/>
+			<column type="fdrview" view="group_by_spectrum"        field="Found_PSMs"       label="Total PSMs"                  width="3" preload="Yes">
+				<parameter name="file" value="[File_descriptor]"/>
+				<parameter name="fdr"  value="PSM_FDR"/>
+			</column>
+			<column type="numberview" view="group_by_spectrum"     field="Invalid_PSM_rows" label="Invalid PSMs"                width="3" preload="Yes">
+				<parameter name="file" value="[File_descriptor]"/>
+				<parameter name="hash" value="#{%22valid_input%22%3A%22INVALID%22}"/>
+			</column>
+			<column type="fdrview" view="group_by_peptide"         field="Peptide_rows"     label="Peptides"                    width="3" preload="Yes">
+				<parameter name="file" value="[File_descriptor]"/>
+				<parameter name="fdr"  value="Peptide_FDR"/>
+			</column>
+			<column type="fdrview" view="group_by_peptide_derived" field="Found_Peptides"   label="Peptides (Derived)"          width="3" preload="Yes">
+				<parameter name="file" value="[File_descriptor]"/>
+				<parameter name="fdr"  value="Peptide_FDR"/>
+			</column>
+			<column type="fdrview" view="group_by_protein"         field="Protein_rows"     label="Proteins"                    width="3" preload="Yes">
+				<parameter name="file" value="[File_descriptor]"/>
+				<parameter name="fdr"  value="Protein_FDR"/>
+			</column>
+			<column type="fdrview" view="group_by_protein_derived" field="Found_Proteins"   label="Proteins (Derived)"          width="3" preload="Yes">
+				<parameter name="file" value="[File_descriptor]"/>
+				<parameter name="fdr"  value="Protein_FDR"/>
+			</column>
+			<column type="view"       view="group_by_protein"      value="View"             label="&quot;One-Hit Wonders&quot;" width="3" preload="Yes" tooltip="Proteins identified by exactly one peptide.">
+				<parameter name="file" value="[File_descriptor]"/>
+				<parameter name="hash" value="#{%22Peptides_lowerinput%22%3A%221%22%2C%22Peptides_upperinput%22%3A%221%22}"/>
+			</column>
+			<column type="view"       view="group_by_ptm"          value="View"             label="PTMs"                        width="3" preload="Yes" tooltip="Spectrum identifications, grouped by unique sets of post-translational modifications.">
+				<parameter name="file" value="[File_descriptor]"/>
+			</column>
+		</row>
+	</block>
+	
+	<!-- PSM views -->
+	<view id="group_by_spectrum" display="hidden">
+		<blockRef id="main" type="spectrum_list"/>
+	</view>
+	<block id="spectrum_list" type="table_ss">
+		<data>
+			<source type="file" name="{file}"/>
+			<parsers>
+				<parser type="mzTab"/>
+				<parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="mzTab"/>
+				<processor type="fileDescriptor"     field="#SpecFile"/>
+				<processor type="nativeID"           field="nativeID"/>
+				<processor type="baseFilename"       field="internalFilename"  newField="baseFilename"/>
+				<processor type="stringSubstitution" field="sequence"          replacedField="sequence_li"          search="I" replace="L"/>
+				<processor type="stringSubstitution" field="modified_sequence" replacedField="modified_sequence_li" search="I" replace="L"/>
+			</processors>
+		</data>
+		<row>
+			<column type="integer" field="PSM_ID"            label="PSM ID"         width="3"  tooltip="PSM ID from within the source MzTab file"/>
+			<column type="text"    field="#SpecFile"         label="Peak List File" width="12" tooltip="The name of the peak list file from which this spectrum came, as referenced from within the source MzTab file"/>
+			<column type="integer" field="nativeID_index"    label="Index"          width="3"  tooltip="Spectrum index (0-based) in the file."/>
+			<column type="integer" field="nativeID_scan"     label="Scan"           width="3"  tooltip="Spectrum scan number"/>
+			<column type="text"    field="modified_sequence" label="Peptide"        width="18" tooltip="The modified peptide sequence matched to this spectrum"/>
+			<column type="text"    field="modifications"     label="Modifications"  width="18" tooltip="The positions and accessions of all post-translational modifications found for this spectrum identification"/>
+			<column type="text"    field="accession"         label="Protein"        width="18" tooltip="The accession of the protein matched to this spectrum"/>
+			<column type="integer" field="charge"            label="Charge"         width="1"  tooltip="Precursor ion charge"/>
+			<column type="text"    field="search_engine"     label="Search Engine"  width="12" tooltip="Search engine used to generate this identification"/>
+			<column type="text"    field="valid"             label="Valid"          width="7"  tooltip="If a spectrum could not be found in the source peak list file, or if the identification contains any ambiguous PTM references, then it will be marked as &quot;INVALID&quot;."/>
+		</row>
+		<row expander="image">
+			<column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file"      file="[internalFilename]"/>
+				<parameter name="scan"      value="[nativeID_scan]"/>
+				<parameter name="index"     value="[nativeID_index_1-based]"/>
+				<parameter name="peptide"   value="[modified_sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+				<parameter name="trim"      value="true"/>
+			</column>
+		</row>
+		<row expander="down:up">
+			<column type="block" block="psms_per_spectrum" colspan="9">
+				<parameter name="file"     value="{file}"/>
+				<parameter name="spectrum" value="[PSM_ID]"/>
+			</column>
+		</row>
+	</block>
+	<block id="psms_per_spectrum" type="table_ss">
+		<data>
+			<source type="file" name="{file}"/>
+			<parsers>
+				<parser type="mzTab"/>
+				<parser type="slicedTabular" groupBy="PSM_ID" sliceBy="{spectrum}"/>
+				<parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="mzTab"/>
+				<processor type="fileDescriptor"     field="#SpecFile"/>
+				<processor type="nativeID"           field="nativeID"/>
+				<processor type="baseFilename"       field="internalFilename"  newField="baseFilename"/>
+				<processor type="stringSubstitution" field="sequence"          replacedField="sequence_li"          search="I" replace="L"/>
+				<processor type="stringSubstitution" field="modified_sequence" replacedField="modified_sequence_li" search="I" replace="L"/>
+			</processors>
+		</data>
+		<row>
+			<column type="integer" field="PSM_ID"        label="PSM ID"        width="3"  tooltip="PSM ID from within the source MzTab file"/>
+			<column type="text"    field="accession"     label="Protein"       width="18" tooltip="The accession of the protein matched to this spectrum"/>
+			<column type="integer" field="charge"        label="Charge"        width="1"  tooltip="Precursor ion charge"/>
+			<column type="text"    field="search_engine" label="Search Engine" width="12" tooltip="Search engine used to generate this identification"/>
+			<column type="text"    field="valid"         label="Valid"         width="7"  tooltip="If a spectrum could not be found in the source peak list file, or if the identification contains any ambiguous PTM references, then it will be marked as &quot;INVALID&quot;."/>
+		</row>
+		<row expander="image">
+			<column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file"      file="[internalFilename]"/>
+				<parameter name="scan"      value="[nativeID_scan]"/>
+				<parameter name="index"     value="[nativeID_index_1-based]"/>
+				<parameter name="peptide"   value="[modified_sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+				<parameter name="trim"      value="true"/>
+			</column>
+		</row>
+	</block>
+	
+	<!-- Peptide views -->
+	<view id="group_by_peptide" display="hidden">
+		<blockRef id="main" type="peptide_list"/>
+	</view>
+	<view id="group_by_peptide_derived" display="hidden">
+		<blockRef id="main" type="peptide_list"/>
+	</view>
+	<block id="peptide_list" type="table_ss">
+		<data>
+			<source type="file" name="{file}"/>
+			<parsers>
+				<parser type="mzTab"/>
+				<parser type="representativeTabular" groupBy="variant" selectBy="PSM_ID" operator="min"/>
+				<parser type="sortedTabular"         sortBy="sequence" operator="ascending"/>
+				<parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="mzTab"/>
+				<processor type="fileDescriptor"     field="#SpecFile"/>
+				<processor type="nativeID"           field="nativeID"/>
+				<processor type="baseFilename"       field="internalFilename"  newField="baseFilename"/>
+				<processor type="stringSubstitution" field="sequence"          replacedField="sequence_li"          search="I" replace="L"/>
+				<processor type="stringSubstitution" field="modified_sequence" replacedField="modified_sequence_li" search="I" replace="L"/>
+			</processors>
+		</data>
+		<row>
+			<column type="integer" field="PSM_ID"            label="PSM ID"           width="3"  tooltip="PSM ID from within the source MzTab file"/>
+			<column type="text"    field="#SpecFile"         label="Peak List File"   width="12" tooltip="The name of the peak list file from which this spectrum came, as referenced from within the source MzTab file"/>
+			<column type="integer" field="nativeID_index"    label="Index"            width="3"  tooltip="Spectrum index (0-based) in the file."/>
+			<column type="integer" field="nativeID_scan"     label="Scan"             width="3"  tooltip="Spectrum scan number"/>
+			<column type="text"    field="sequence"          label="Peptide"          width="18" tooltip="The unmodified peptide sequence matched to this spectrum"/>
+			<column type="text"    field="modified_sequence" label="Modified Peptide" width="18" tooltip="The modified peptide sequence matched to this spectrum"/>
+			<column type="text"    field="modifications"     label="Modifications"  width="18" tooltip="The positions and accessions of all post-translational modifications found for this spectrum identification"/>
+			<column type="text"    field="accession"         label="Protein"          width="18" tooltip="The accession of the protein matched to this spectrum"/>
+			<column type="integer" field="charge"            label="Charge"           width="1"  tooltip="Precursor ion charge"/>
+			<column type="text"    field="search_engine"     label="Search Engine"    width="12" tooltip="Search engine used to generate this identification"/>
+			<column type="text"    field="valid"             label="Valid"            width="7"  tooltip="If a spectrum could not be found in the source peak list file, or if the identification contains any ambiguous PTM references, then it will be marked as &quot;INVALID&quot;."/>
+		</row>
+		<row expander="image">
+			<column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file"      file="[internalFilename]"/>
+				<parameter name="scan"      value="[nativeID_scan]"/>
+				<parameter name="index"     value="[nativeID_index_1-based]"/>
+				<parameter name="peptide"   value="[modified_sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+				<parameter name="trim"      value="true"/>
+			</column>
+		</row>
+		<row expander="down:up">
+			<column type="block" block="spectra_per_peptide" colspan="9">
+				<parameter name="file"    value="{file}"/>
+				<parameter name="variant" value="[variant]"/>
+			</column>
+		</row>
+	</block>
+	<block id="spectra_per_peptide" type="table_ss">
+		<data>
+			<source type="file" name="{file}"/>
+			<parsers>
+				<parser type="mzTab"/>
+				<parser type="slicedTabular" groupBy="variant" sliceBy="{variant}"/>
+				<parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="mzTab"/>
+				<processor type="fileDescriptor"     field="#SpecFile"/>
+				<processor type="nativeID"           field="nativeID"/>
+				<processor type="baseFilename"       field="internalFilename"  newField="baseFilename"/>
+				<processor type="stringSubstitution" field="sequence"          replacedField="sequence_li"          search="I" replace="L"/>
+				<processor type="stringSubstitution" field="modified_sequence" replacedField="modified_sequence_li" search="I" replace="L"/>
+			</processors>
+		</data>
+		<row>
+			<column type="integer" field="PSM_ID"            label="PSM ID"           width="3"  tooltip="PSM ID from within the source MzTab file"/>
+			<column type="text"    field="#SpecFile"         label="Peak List File"   width="12" tooltip="The name of the peak list file from which this spectrum came, as referenced from within the source MzTab file"/>
+			<column type="integer" field="nativeID_index"    label="Index"            width="3"  tooltip="Spectrum index (0-based) in the file."/>
+			<column type="integer" field="nativeID_scan"     label="Scan"             width="3"  tooltip="Spectrum scan number"/>
+			<column type="text"    field="modified_sequence" label="Modified Peptide" width="18" tooltip="The modified peptide sequence matched to this spectrum"/>
+			<column type="text"    field="modifications"     label="Modifications"  width="18" tooltip="The positions and accessions of all post-translational modifications found for this spectrum identification"/>
+			<column type="text"    field="accession"         label="Protein"          width="18" tooltip="The accession of the protein matched to this spectrum"/>
+			<column type="integer" field="charge"            label="Charge"           width="1"  tooltip="Precursor ion charge"/>
+			<column type="text"    field="search_engine"     label="Search Engine"    width="12" tooltip="Search engine used to generate this identification"/>
+			<column type="text"    field="valid"             label="Valid"            width="7"  tooltip="If a spectrum could not be found in the source peak list file, or if the identification contains any ambiguous PTM references, then it will be marked as &quot;INVALID&quot;."/>
+		</row>
+		<row expander="image">
+			<column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file"      file="[internalFilename]"/>
+				<parameter name="scan"      value="[nativeID_scan]"/>
+				<parameter name="index"     value="[nativeID_index_1-based]"/>
+				<parameter name="peptide"   value="[modified_sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+				<parameter name="trim"      value="true"/>
+			</column>
+		</row>
+	</block>
+	
+	<!-- Protein views -->
+	<view id="group_by_protein" display="hidden">
+		<blockRef id="main" type="protein_list"/>
+	</view>
+	<view id="group_by_protein_derived" display="hidden">
+		<blockRef id="main" type="protein_list"/>
+	</view>
+	<block id="protein_list" type="table_ss">
+		<data>
+			<source type="file" name="{file}"/>
+			<parsers>
+				<parser type="mzTab"/>
+				<parser type="unrolledTabular" unrollBy="accession" fieldDelimiter=";"/>
+				<parser type="groupedTabular"  groupBy="accession"  numeric="false"/>
+				<parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="mzTab"/>
+				<processor type="protein"      field="accession"/>
+				<processor type="peptideCount" field="modified_sequence"/>
+			</processors>
+		</data>
+		<row>
+			<column type="view" view="protein_details" field="accession" label="Protein" width="18" preload="Yes">
+				<parameter name="file"    value="{file}"/>
+				<parameter name="protein" value="[accession]"/>
+			</column>
+			<column type="integer" field="Hits"     label="PSMs"                       width="2"/>
+			<column type="integer" field="Peptides" label="Unique Unmodified Peptides" width="2"/>
+			<column type="integer" field="Modified" label="Unique Modified Peptides"   width="2"/>
+		</row>
+		<row expander="down:up">
+			<column type="block" block="spectra_per_protein" colspan="5">
+				<parameter name="file"    value="{file}"/>
+				<parameter name="protein" value="[accession]"/>
+			</column>
+		</row>
+	</block>
+	
+	<view id="protein_details" display="hidden">
+		<blockRef id="title" type="protein_title"/>
+		<blockRef id="main"  type="spectra_per_protein"/>
+	</view>
+	<block id="protein_title" type="title">
+		<data><source type="value" value="Protein {protein}"/></data>
+	</block>
+	<block id="spectra_per_protein" type="table_ss">
+		<data>
+			<source type="file" name="{file}"/>
+			<parsers>
+				<parser type="mzTab"/>
+				<parser type="unrolledTabular" unrollBy="accession" fieldDelimiter=";"/>
+				<parser type="slicedTabular"   groupBy="accession"  numeric="false" sliceBy="{protein}"/>
+				<parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="mzTab"/>
+				<processor type="fileDescriptor"     field="#SpecFile"/>
+				<processor type="nativeID"           field="nativeID"/>
+				<processor type="baseFilename"       field="internalFilename"  newField="baseFilename"/>
+				<processor type="stringSubstitution" field="sequence"          replacedField="sequence_li"          search="I" replace="L"/>
+				<processor type="stringSubstitution" field="modified_sequence" replacedField="modified_sequence_li" search="I" replace="L"/>
+			</processors>
+		</data>
+		<row>
+			<column type="integer" field="PSM_ID"            label="PSM ID"         width="3"  tooltip="PSM ID from within the source MzTab file"/>
+			<column type="text"    field="#SpecFile"         label="Peak List File" width="12" tooltip="The name of the peak list file from which this spectrum came, as referenced from within the source MzTab file"/>
+			<column type="integer" field="nativeID_index"    label="Index"          width="3"  tooltip="Spectrum index (0-based) in the file."/>
+			<column type="integer" field="nativeID_scan"     label="Scan"           width="3"  tooltip="Spectrum scan number"/>
+			<column type="text"    field="modified_sequence" label="Peptide"        width="18" tooltip="The modified peptide sequence matched to this spectrum"/>
+			<column type="text"    field="modifications"     label="Modifications"  width="18" tooltip="The positions and accessions of all post-translational modifications found for this spectrum identification"/>
+			<column type="integer" field="charge"            label="Charge"         width="1"  tooltip="Precursor ion charge"/>
+			<column type="text"    field="search_engine"     label="Search Engine"  width="12" tooltip="Search engine used to generate this identification"/>
+			<column type="text"    field="valid"             label="Valid"          width="7"  tooltip="If a spectrum could not be found in the source peak list file, or if the identification contains any ambiguous PTM references, then it will be marked as &quot;INVALID&quot;."/>
+		</row>
+		<row expander="image">
+			<column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file"      file="[internalFilename]"/>
+				<parameter name="scan"      value="[nativeID_scan]"/>
+				<parameter name="index"     value="[nativeID_index_1-based]"/>
+				<parameter name="peptide"   value="[modified_sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+				<parameter name="trim"      value="true"/>
+			</column>
+		</row>
+	</block>
+	
+	<!-- PTM views -->
+	<view id="group_by_ptm" display="hidden">
+		<blockRef id="main" type="ptm_list"/>
+	</view>
+	<block id="ptm_list" type="table_ss">
+		<data>
+			<source type="file" name="{file}"/>
+			<parsers>
+				<parser type="mzTab"/>
+				<parser type="unrolledTabular" unrollBy="mod_set" fieldDelimiter="|"/>
+				<parser type="groupedTabular"  groupBy="mod_set"  numeric="false"/>
+				<parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="mzTab"/>
+				<processor type="peptideCount" field="modified_sequence"/>
+			</processors>
+		</data>
+		<row>
+			<column type="view" view="ptm_details" field="mod_set" label="Post-Translational Modifications" width="18" preload="Yes">
+				<parameter name="file"       value="{file}"/>
+				<parameter name="mod_set"    value="[mod_set]"/>
+				<parameter name="null_label" value="None"/>
+			</column>
+			<column type="integer" field="Hits"     label="PSMs with this Modification" width="2"/>
+			<column type="integer" field="Peptides" label="Unique Unmodified Peptides"  width="2"/>
+			<column type="integer" field="Modified" label="Unique Modified Peptides"    width="2"/>
+		</row>
+	</block>
+	
+	<view id="ptm_details" display="hidden">
+		<blockRef id="title" type="ptm_title"/>
+		<blockRef id="main"  type="spectra_per_ptm"/>
+	</view>
+	<block id="ptm_title" type="title">
+		<data>
+			<source type="value"
+				value="Post-Translational Modifications: {mod_set}"/>
+		</data>
+	</block>
+	<block id="spectra_per_ptm" type="table_ss">
+		<data>
+			<source type="file" name="{file}"/>
+			<parsers>
+				<parser type="mzTab"/>
+				<parser type="unrolledTabular" unrollBy="mod_set" fieldDelimiter="|"/>
+				<parser type="slicedTabular"   groupBy="mod_set"  numeric="false" sliceBy="{mod_set}"/>
+				<parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="mzTab"/>
+				<processor type="fileDescriptor"     field="#SpecFile"/>
+				<processor type="nativeID"           field="nativeID"/>
+				<processor type="baseFilename"       field="internalFilename"  newField="baseFilename"/>
+				<processor type="stringSubstitution" field="sequence"          replacedField="sequence_li"          search="I" replace="L"/>
+				<processor type="stringSubstitution" field="modified_sequence" replacedField="modified_sequence_li" search="I" replace="L"/>
+			</processors>
+		</data>
+		<row>
+			<column type="integer" field="PSM_ID"            label="PSM ID"           width="3"  tooltip="PSM ID from within the source MzTab file"/>
+			<column type="text"    field="#SpecFile"         label="Peak List File"   width="12" tooltip="The name of the peak list file from which this spectrum came, as referenced from within the source MzTab file"/>
+			<column type="integer" field="nativeID_index"    label="Index"            width="3"  tooltip="Spectrum index (0-based) in the file."/>
+			<column type="integer" field="nativeID_scan"     label="Scan"             width="3"  tooltip="Spectrum scan number"/>
+			<column type="text"    field="modified_sequence" label="Modified Peptide" width="18" tooltip="The modified peptide sequence matched to this spectrum"/>
+			<column type="text"    field="modifications"     label="Modifications"  width="18" tooltip="The positions and accessions of all post-translational modifications found for this spectrum identification"/>
+			<column type="text"    field="accession"         label="Protein"          width="18" tooltip="The accession of the protein matched to this spectrum"/>
+			<column type="integer" field="charge"            label="Charge"           width="1"  tooltip="Precursor ion charge"/>
+			<column type="text"    field="search_engine"     label="Search Engine"    width="12" tooltip="Search engine used to generate this identification"/>
+			<column type="text"    field="valid"             label="Valid"            width="7"  tooltip="If a spectrum could not be found in the source peak list file, or if the identification contains any ambiguous PTM references, then it will be marked as &quot;INVALID&quot;."/>
+		</row>
+		<row expander="image">
+			<column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file"      file="[internalFilename]"/>
+				<parameter name="scan"      value="[nativeID_scan]"/>
+				<parameter name="index"     value="[nativeID_index_1-based]"/>
+				<parameter name="peptide"   value="[modified_sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+				<parameter name="trim"      value="true"/>
+			</column>
+		</row>
+	</block>
+	<!-- END standard mzTab result view specifications -->
+
+	<!-- Two Pass Views -->
+	<view id="firstpass_peptides" label="First Pass Peptides 1% FDR" group="Precursor Level">
+		<blockRef id="main" type="firstpass_peptides"/>
+	</view>
+
+	<block id="firstpass_peptides" type="table">
+		<data>
+			<source type="file" name="firstpass_peptides/"/>
+			<parsers>
+				<parser type="sortedTabular" sortBy="score" operator="ascending"/>
+			</parsers>
+			<processors>
+				<processor type="uploadFilename" field="filename"/>
+			</processors>
+		</data>
+		<row>
+			<column type="text"        field="filename"  label="filename"   width="12"    tooltip="Spectrum file name"/>
+			<column type="integer"     field="scan"      label="scan"       width="3"     tooltip="Spectrum scan number"/>
+			<column type="text"        field="variant_sequence"    label="variant_sequence"    width="18"    tooltip="Peptide sequence with neighboring amino acids"/>
+			<column type="text"        field="decoy"    label="decoy"    width="18"    tooltip="Decoys"/>
+			<column type="float"       field="score"     label="score"     precision="5" />
+		</row>
+		<row expander="image">
+			<column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file" file="spec/[internalFilename]"/>
+				<parameter name="scan" value="[scan]"/>
+				<parameter name="peptide" value="[variant_sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+			</column>
+		</row>
+	</block>
+
+
+	<view id="secondpass_peptides" label="Second Pass Peptides 1%" group="Precursor Level">
+		<blockRef id="main" type="secondpass_peptides"/>
+	</view>
+
+	<block id="secondpass_peptides" type="table">
+		<data>
+			<source type="file" name="secondpass_peptides/"/>
+			<parsers>
+				<parser type="sortedTabular" sortBy="score" operator="ascending"/>
+			</parsers>
+			<processors>
+				<processor type="uploadFilename" field="filename"/>
+			</processors>
+		</data>
+		<row>
+			<column type="text"        field="filename"  label="filename"   width="12"    tooltip="Spectrum file name"/>
+			<column type="integer"     field="scan"      label="scan"       width="3"     tooltip="Spectrum scan number"/>
+			<column type="text"        field="variant_sequence"    label="variant_sequence"    width="18"    tooltip="Peptide sequence with neighboring amino acids"/>
+			<column type="text"        field="decoy"    label="decoy"    width="18"    tooltip="Decoys"/>
+			<column type="float"       field="score"     label="score"     precision="5" />
+			<column type="float"       field="ScoreImprovement"     label="ScoreImprovement"     precision="5" />
+		</row>
+		<row expander="image">
+			<column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file" file="spec/[internalFilename]"/>
+				<parameter name="scan" value="[scan]"/>
+				<parameter name="peptide" value="[variant_sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+			</column>
+		</row>
+	</block>
+
+
+
+
+
+	<view id="view_stats" label="View Stats" group="Proteins">
+		<blockRef id="main" type="view_stats"/>
+	</view>
+
+    <block id="view_stats" type="stream">
+        <data>
+            <source type="file" name="library_coverage_summary_statistics/"/>
+            <parsers>
+                    <parser type="stream" contentType="text/plain"/>
+            </parsers>
+        </data>
+    </block>
+
+	<view id="first_pass_proteins_list" label="First Pass Proteins" group="Proteins">
+		<blockRef id="main" type="first_pass_proteins_list"/>
+	</view>
+
+	<block id="first_pass_proteins_list" type="table">
+		<data>
+			<source type="file" name="secondpassproteins_list/"/>
+			<parsers>
+				<parser type="sortedTabular" sortBy="Protein" operator="ascending"/>
+			</parsers>
+		</data>
+		<row>
+			<column type="text"        field="Protein"  label="Protein"   width="12"    tooltip="Spectrum file name"/>
+		</row>
+	</block>
+
+	<view id="first_pass_protein_stats_table" label="First Pass Proteins Details" group="Proteins">
+		<blockRef id="main" type="first_pass_protein_stats_table"/>
+	</view>
+
+	<block id="first_pass_protein_stats_table" type="table">
+		<data>
+			<source type="file" name="first_pass_protein_stats_table/"/>
+			<parsers>
+				<parser type="sortedTabular" sortBy="protein" operator="ascending"/>
+			</parsers>
+		</data>
+		<row>
+			<column type="text"           field="protein"  label="protein"   width="12"/>
+			<column type="integer"        field="decoy_count"  label="decoy_count"   width="12"/>
+			<column type="integer"        field="target_count"  label="target_count"   width="12"/>
+			<column type="integer"        field="total_count"  label="total_count"   width="12"/>
+			<column type="integer"        field="length"  label="length"   width="12"/>
+		</row>
+	</block>
+
+
+	<!-- Histograms -->
+
+    <!-- SEARCH HISTOGRAMS -->
+    <view id="searchppmerror" label="Search PPM Histogram" group="Histograms">
+            <blockRef id="main" type="searchppmerror"/>
+    </view>
+	<block id="searchppmerror" type="histogramdisplayer" viewname="group_by_spectrum_old" columnname="PMError(ppm)">
+        <data>
+            <source type="file" name="library_coverage_summary_statistics/"/>
+            <parsers>
+                <parser type="stream" contentType="text/plain"/>
+            </parsers>
+        </data>
+    </block>
+
+
+
+	<view id="firstpassscorehistogram" label="First Pass Score" group="Histograms">
+            <blockRef id="main" type="firstpassscorehistogram"/>
+    </view>
+	<block id="firstpassscorehistogram" type="histogramdisplayer" viewname="firstpass_peptides" columnname="score">
+        <data>
+            <source type="file" name="library_coverage_summary_statistics/"/>
+            <parsers>
+                <parser type="stream" contentType="text/plain"/>
+            </parsers>
+        </data>
+    </block>
+
+	<view id="secondpassscorehistogram" label="Second Pass Score" group="Histograms">
+            <blockRef id="main" type="secondpassscorehistogram"/>
+    </view>
+
+
+	<block id="secondpassscorehistogram" type="histogramdisplayer" viewname="secondpass_peptides" columnname="SecondPassScore">
+        <data>
+            <source type="file" name="library_coverage_summary_statistics/"/>
+            <parsers>
+                <parser type="stream" contentType="text/plain"/>
+            </parsers>
+        </data>
+    </block>
+
+	<!-- Histogram of score improvements -->
+	<view id="secondpassscoreimprovementhistogram" label="Second Pass Score Improvement" group="Histograms">
+            <blockRef id="main" type="secondpassscoreimprovementhistogram"/>
+    </view>
+	<block id="secondpassscoreimprovementhistogram" type="histogramdisplayer" viewname="group_by_spectrum_merged_result_with_kl_with_ambiguity" columnname="score_improvement">
+        <data>
+            <source type="file" name="library_coverage_summary_statistics/"/>
+            <parsers>
+                <parser type="stream" contentType="text/plain"/>
+            </parsers>
+        </data>
+    </block>
+
+
+
+	<!-- Display a histogram of the number of peptides at a given FDR -->
+	<view id="peptide_counts_at_fdr" label="Peptide Count at FDR" group="Histograms">
+            <blockRef id="main" type="peptide_counts_at_fdr"/>
+    </view>
+	<block id="peptide_counts_at_fdr" type="histogramdisplayer" viewname="firstpass_peptides_full" columnname="FDR">
+        <data>
+            <source type="file" name="library_coverage_summary_statistics/"/>
+            <parsers>
+                <parser type="stream" contentType="text/plain"/>
+            </parsers>
+        </data>
+    </block>
+
+	<!-- Scatter plot of score to score improvement -->
+	<view id="view_scatter_score_improvement_to_score" label="Score Improvement to Score" group="Scatter Plots">
+        <blockRef id="main"   type="view_scatter_score_improvement_to_score"/>
+    </view>
+    <block id="view_scatter_score_improvement_to_score" type="scatterplotdisplayer" viewname="secondpass_peptides" xname="score" yname="ScoreImprovement">
+        <data>
+            <source type="file" name="library_coverage_summary_statistics/"/>
+	        <parsers>
+	            <parser type="stream" contentType="text/plain"/>
+	        </parsers>
+    	</data>
+    </block>
+
+
+	<!-- All PSMs with KL -->
+	<view id="view_original_psms" label="view_original_psms" group="PSMs">
+		<blockRef id="main" type="view_original_psms"/>
+	</view>
+	<block id="view_original_psms" type="table_ss">
+		<data>
+			<source type="file" name="original_eval_psms_high_fdr/"/>
+			<parsers>
+				<parser type="sortedTabular" sortBy="score" operator="ascending"/>
+                <parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="uploadFilename" field="filename"/>
+			</processors>
+		</data>
+		<row>
+			<column type="text"        field="filename"  label="filename"   width="12"    tooltip="Spectrum file name"/>
+			<column type="integer"     field="scan"      label="scan"       width="3"     tooltip="Spectrum scan number"/>
+			<column type="text"        field="sequence" label="sequence" width="3"     tooltip="Fragmentation method"/>
+			<column type="text"        field="charge"    label="charge"    width="18"    tooltip="Peptide sequence with neighboring amino acids"/>
+		</row>
+		<row expander="image">
+			<column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file" file="[internalFilename]"/>
+				<parameter name="scan" value="[scan]"/>
+				<parameter name="peptide" value="[sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+			</column>
+		</row>
+	</block>
+
+
+	<view id="view_rescored_psms" label="view_rescored_psms" group="PSMs">
+		<blockRef id="main" type="view_rescored_psms"/>
+	</view>
+	<block id="view_rescored_psms" type="table_ss">
+		<data>
+			<source type="file" name="updated_eval_psms_with_kl/"/>
+			<parsers>
+				<parser type="sortedTabular" sortBy="score" operator="ascending"/>
+                <parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="uploadFilename" field="filename"/>
+			</processors>
+		</data>
+		<row>
+			<column type="text"        field="filename"  label="filename"   width="12"    tooltip="Spectrum file name"/>
+			<column type="integer"     field="scan"      label="scan"       width="3"     tooltip="Spectrum scan number"/>
+			<column type="text"        field="sequence" label="sequence" width="3"     tooltip="Fragmentation method"/>
+			<column type="text"        field="charge"    label="charge"    width="18"    tooltip="Peptide sequence with neighboring amino acids"/>
+			<column type="float"       field="kl_number"        label="kl_number"        precision="5" tooltip="False discovery rate"/>
+		</row>
+		<row expander="image">
+			<column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file" file="[internalFilename]"/>
+				<parameter name="scan" value="[scan]"/>
+				<parameter name="peptide" value="[sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+			</column>
+		</row>
+	</block>
+
+	<!-- With Ambiguity -->
+	<view id="view_rescored_psms_with_ambiguity" label="view rescored psms with ambiguity" group="PSMs">
+		<blockRef id="main" type="view_rescored_psms_with_ambiguity"/>
+	</view>
+	<block id="view_rescored_psms_with_ambiguity" type="table_ss">
+		<data>
+			<source type="file" name="updated_eval_psms_with_kl_with_ambiguity/"/>
+			<parsers>
+				<parser type="sortedTabular" sortBy="score" operator="ascending"/>
+				<parser type="SQLite"/>
+			</parsers>
+			<processors>
+				<processor type="uploadFilename" field="filename"/>
+			</processors>
+		</data>
+		<row>
+			<column type="text"        field="filename"  label="filename"   width="12"    tooltip="Spectrum file name"/>
+			<column type="integer"     field="scan"      label="scan"       width="3"     tooltip="Spectrum scan number"/>
+			<column type="text"        field="sequence" label="sequence" width="3"     tooltip="Fragmentation method"/>
+			<column type="text"        field="charge"    label="charge"    width="18"    tooltip="Peptide sequence with neighboring amino acids"/>
+            <column type="float"       field="score"        label="score"        precision="5" tooltip="Score"/>
+			<column type="float"       field="kl_strict"        label="kl_strict"        precision="5" tooltip="False discovery rate"/>
+            <column type="float"       field="kl_unstrict"        label="kl_unstrict"        precision="5" tooltip="False discovery rate"/>
+            <column type="float"       field="kl_interpeak"        label="kl_interpeak"        precision="5" tooltip="False discovery rate"/>
+			<column type="float"       field="ambiguity_total_score"        label="ambiguity_total_score"        precision="5" tooltip="False discovery rate"/>
+            <column type="integer"       field="numberpsms"        label="numberpsms"        />
+            <column type="float"       field="first_unique_intensity"        label="first_unique_intensity"        precision="5" tooltip="False discovery rate"/>
+            <column type="float"       field="second_unique_intensity"        label="second_unique_intensity"        precision="5" tooltip="False discovery rate"/>
+			<column type="float"       field="score_improvement"        label="score_improvement"        precision="5" tooltip="False discovery rate"/>
+			<column type="float"       field="FDR"        label="FDR"        precision="5" tooltip="False discovery rate"/>
+			<column type="integer"     field="decoy"      label="decoy"       width="3"     tooltip="Spectrum scan number"/>
+		</row>
+		<row expander="image">
+            <column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file" file="spec/[internalFilename]"/>
+				<parameter name="scan" value="[scan]"/>
+				<parameter name="peptide" value="[sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+			</column>
+		</row>
+	</block>
+
+	<!-- Histogram of scores of target and decoy PSMs -->
+	<view id="histogram_rescored_decoy_psms" label="histogram_rescored_decoy_psms" group="PSM Histograms">
+		<blockRef id="main"   type="histogram_rescored_decoy_psms"/>
+	</view>
+	<block id="histogram_rescored_decoy_psms" type="histogramdisplayer" viewname="view_rescored_psms_with_ambiguity" columnname="score" filtercolumn="decoy" filtervalue="1">
+		<data>
+			<source type="file" name="statistics/"/>
+			<parsers>
+				<parser type="stream" contentType="text/plain"/>
+			</parsers>
+		</data>
+	</block>
+
+	<view id="histogram_rescored_target_psms" label="histogram_rescored_target_psms" group="PSM Histograms">
+		<blockRef id="main"   type="histogram_rescored_target_psms"/>
+	</view>
+	<block id="histogram_rescored_target_psms" type="histogramdisplayer" viewname="view_rescored_psms_with_ambiguity" columnname="score" filtercolumn="decoy" filtervalue="0">
+		<data>
+			<source type="file" name="statistics/"/>
+			<parsers>
+				<parser type="stream" contentType="text/plain"/>
+			</parsers>
+		</data>
+	</block>
+
+	<view id="histogram_rescored_decoy_psms_improvement" label="histogram_rescored_decoy_psms_improvement" group="PSM Histograms">
+		<blockRef id="main"   type="histogram_rescored_decoy_psms_improvement"/>
+	</view>
+	<block id="histogram_rescored_decoy_psms_improvement" type="histogramdisplayer" viewname="view_rescored_psms_with_ambiguity" columnname="score_improvement" filtercolumn="decoy" filtervalue="1">
+		<data>
+			<source type="file" name="statistics/"/>
+			<parsers>
+				<parser type="stream" contentType="text/plain"/>
+			</parsers>
+		</data>
+	</block>
+
+	<view id="histogram_rescored_target_psms_improvement" label="histogram_rescored_target_psms_improvement" group="PSM Histograms">
+		<blockRef id="main"   type="histogram_rescored_target_psms_improvement"/>
+	</view>
+	<block id="histogram_rescored_target_psms_improvement" type="histogramdisplayer" viewname="view_rescored_psms_with_ambiguity" columnname="score_improvement" filtercolumn="decoy" filtervalue="0">
+		<data>
+			<source type="file" name="statistics/"/>
+			<parsers>
+				<parser type="stream" contentType="text/plain"/>
+			</parsers>
+		</data>
+	</block>
+
+
+
+    <view id="group_by_spectrum_merged_result_with_kl_with_ambiguity" label="Spectra with Ambiguity" group="PSMs">
+		<blockRef id="main" type="group_by_spectrum_merged_result_with_kl_with_ambiguity"/>
+	</view>
+	<block id="group_by_spectrum_merged_result_with_kl_with_ambiguity" type="table">
+		<data>
+			<source type="file" name="updated_eval_psms_with_kl_with_ambiguity/"/>
+			<parsers>
+				<parser type="sortedTabular" sortBy="score" operator="ascending"/>
+                <parser type="representativeTabular" groupBy="spectrum_unique_key" selectBy="score" operator="max"/>
+			</parsers>
+			<processors>
+				<processor type="uploadFilename" field="filename"/>
+			</processors>
+		</data>
+		<row>
+			<column type="text"        field="filename"  label="filename"   width="12"    tooltip="Spectrum file name"/>
+			<column type="integer"     field="scan"      label="scan"       width="3"     tooltip="Spectrum scan number"/>
+			<column type="text"        field="sequence" label="sequence" width="3"     tooltip="Fragmentation method"/>
+			<column type="text"        field="charge"    label="charge"    width="18"    tooltip="Peptide sequence with neighboring amino acids"/>
+            <column type="float"       field="score"        label="score"        precision="5" tooltip="Score"/>
+			<column type="float"       field="kl_strict"        label="kl_strict"        precision="5" tooltip="False discovery rate"/>
+            <column type="float"       field="kl_unstrict"        label="kl_unstrict"        precision="5" tooltip="False discovery rate"/>
+            <column type="float"       field="kl_interpeak"        label="kl_interpeak"        precision="5" tooltip="False discovery rate"/>
+			<column type="float"       field="ambiguity_total_score"        label="ambiguity_total_score"        precision="5" tooltip="False discovery rate"/>
+            <column type="integer"       field="numberpsms"        label="numberpsms"        />
+            <column type="float"       field="first_unique_intensity"        label="first_unique_intensity"        precision="5" tooltip="False discovery rate"/>
+            <column type="float"       field="second_unique_intensity"        label="second_unique_intensity"        precision="5" tooltip="False discovery rate"/>
+			<column type="float"       field="score_improvement"        label="score_improvement"        precision="5" tooltip="False discovery rate"/>
+			<column type="integer"     field="decoy"      label="decoy"       width="3"     tooltip="Spectrum scan number"/>
+		</row>
+		<row expander="image">
+			<!-- <column type="stream" invoke="annotatedSpectrumImageThumbnail" contentType="image/png" colspan="6">
+				<parameter name="file"          file="spec/[internalFilename]"/>
+				<parameter name="scan"          value="[scan]"/>
+				<parameter name="peptide"       value="[sequence]"/>
+			</column> -->
+            <column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+				<parameter name="file" file="spec/[internalFilename]"/>
+				<parameter name="scan" value="[scan]"/>
+				<parameter name="peptide" value="[sequence]"/>
+				<parameter name="modformat" value="inspect"/>
+			</column>
+		</row>
+		<row expander="Show PSMs:Hide PSMs" expandericontype="text">
+			<column type="block" block="psms_per_spectrum" colspan="12">
+				<parameter name="spectrum_unique_key" value="[spectrum_unique_key]"/>
+			</column>
+		</row>
+	</block>
+
+
+	<block id="psms_per_spectrum" type="table">
+                <data>
+                        <source type="file" name="updated_eval_psms_with_kl_with_ambiguity/"/>
+                        <parsers>
+                                <parser type="sortedTabular" sortBy="score" operator="ascending"/>
+				<parser type="slicedTabular" groupBy="spectrum_unique_key" sliceBy="{spectrum_unique_key}"/>
+                        </parsers>
+                        <processors>
+                                <processor type="uploadFilename" field="filename"/>
+                        </processors>
+                </data>
+                <row>
+                        <column type="text"        field="filename"  label="filename"   width="12"    tooltip="Spectrum file name"/>
+                        <column type="integer"     field="scan"      label="scan"       width="3"     tooltip="Spectrum scan number"/>
+                        <column type="text"        field="sequence" label="sequence" width="3"     tooltip="Fragmentation method"/>
+                        <column type="text"        field="charge"    label="charge"    width="18"    tooltip="Peptide sequence with neighboring amino acids"/>
+            			<column type="float"       field="score"        label="score"        precision="5" tooltip="Score"/>
+                        <column type="float"       field="kl_number"        label="kl_number"        precision="5" tooltip="False discovery rate"/>
+                        <column type="float"       field="ambiguity_total_score"        label="ambiguity_total_score"        precision="5" tooltip="False discovery rate"/>
+						<column type="integer"     field="decoy"      label="decoy"       width="3"     tooltip="Spectrum scan number"/>
+            <column type="integer"       field="numberpsms"        label="numberpsms"        />
+                </row>
+                <row expander="image">
+                        <!-- <column type="stream" invoke="annotatedSpectrumImageThumbnail" contentType="image/png" colspan="6">
+                                <parameter name="file"          file="spec/[internalFilename]"/>
+                                <parameter name="scan"          value="[scan]"/>
+                                <parameter name="peptide"       value="[sequence]"/>
+                        </column> -->
+                        <column type="jscolumnspectrumviewer" colspan="20" width="600" height="500">
+            				<parameter name="file" file="spec/[internalFilename]"/>
+            				<parameter name="scan" value="[scan]"/>
+            				<parameter name="peptide" value="[sequence]"/>
+            				<parameter name="modformat" value="inspect"/>
+            			</column>
+                </row>
+        </block>
+
+        <view id="kl_strict_vs_ambiguity_score" label="KL Strict vs Ambiguity" group="Scatter Plots">
+            <blockRef id="main"   type="kl_strict_vs_ambiguity_score"/>
+        </view>
+        <block id="kl_strict_vs_ambiguity_score" type="scatterplotdisplayer" viewname="group_by_spectrum_merged_result_with_kl_with_ambiguity" xname="kl_strict" yname="ambiguity_total_score">
+            <data>
+                <source type="file" name="library_coverage_summary_statistics/"/>
+    	        <parsers>
+    	            <parser type="stream" contentType="text/plain"/>
+    	        </parsers>
+        	</data>
+        </block>
+
+        <view id="kl_strict_vs_kl_interpeak" label="KL Strict vs KL Interpeak" group="Scatter Plots">
+            <blockRef id="main"   type="kl_strict_vs_kl_interpeak"/>
+        </view>
+        <block id="kl_strict_vs_kl_interpeak" type="scatterplotdisplayer" viewname="group_by_spectrum_merged_result_with_kl_with_ambiguity" xname="kl_strict" yname="kl_interpeak">
+            <data>
+                <source type="file" name="library_coverage_summary_statistics/"/>
+    	        <parsers>
+    	            <parser type="stream" contentType="text/plain"/>
+    	        </parsers>
+        	</data>
+        </block>
+
+        <view id="kl_unstrict_vs_kl_interpeak" label="KL UnStrict vs KL Interpeak" group="Scatter Plots">
+            <blockRef id="main"   type="kl_unstrict_vs_kl_interpeak"/>
+        </view>
+        <block id="kl_unstrict_vs_kl_interpeak" type="scatterplotdisplayer" viewname="group_by_spectrum_merged_result_with_kl_with_ambiguity" xname="kl_unstrict" yname="kl_interpeak">
+            <data>
+                <source type="file" name="library_coverage_summary_statistics/"/>
+    	        <parsers>
+    	            <parser type="stream" contentType="text/plain"/>
+    	        </parsers>
+        	</data>
+        </block>
+
+        <view id="kl_strict_vs_kl_unstrict" label="KL Strict vs KL UnStrict" group="Scatter Plots">
+            <blockRef id="main"   type="kl_strict_vs_kl_unstrict"/>
+        </view>
+        <block id="kl_strict_vs_kl_unstrict" type="scatterplotdisplayer" viewname="group_by_spectrum_merged_result_with_kl_with_ambiguity" xname="kl_strict" yname="kl_unstrict">
+            <data>
+                <source type="file" name="library_coverage_summary_statistics/"/>
+    	        <parsers>
+    	            <parser type="stream" contentType="text/plain"/>
+    	        </parsers>
+        	</data>
+        </block>
+
+
+        <view id="KLStrictHistogram" label="KL Strict Histogram" group="Histograms">
+                <blockRef id="main" type="KLStrictHistogram"/>
+        </view>
+    	<block id="KLStrictHistogram" type="histogramdisplayer" viewname="group_by_spectrum_merged_result_with_kl_with_ambiguity" columnname="kl_strict">
+            <data>
+                <source type="file" name="statistics/"/>
+                <parsers>
+                    <parser type="stream" contentType="text/plain"/>
+                </parsers>
+            </data>
+        </block>
+
+        <view id="KLUnStrictHistogram" label="KL UnStrict Histogram" group="Histograms">
+                <blockRef id="main" type="KLUnStrictHistogram"/>
+        </view>
+    	<block id="KLUnStrictHistogram" type="histogramdisplayer" viewname="group_by_spectrum_merged_result_with_kl_with_ambiguity" columnname="kl_unstrict">
+            <data>
+                <source type="file" name="statistics/"/>
+                <parsers>
+                    <parser type="stream" contentType="text/plain"/>
+                </parsers>
+            </data>
+        </block>
+
+
+		<!-- Target vs Decoy Scores -->
+		<view id="rescored_target_distribution" label="rescored_target_distribution" group="Target Decoy Score Distributions">
+                <blockRef id="main" type="rescored_target_distribution"/>
+        </view>
+    	<block id="rescored_target_distribution" type="histogramdisplayer" viewname="view_rescored_psms_with_ambiguity" columnname="score" filtercolumn="decoy" filtervalue="0">
+            <data>
+                <source type="file" name="statistics/"/>
+                <parsers>
+                    <parser type="stream" contentType="text/plain"/>
+                </parsers>
+            </data>
+        </block>
+
+		<view id="rescored_decoy_distribution" label="rescored_decoy_distribution" group="Target Decoy Score Distributions">
+                <blockRef id="main" type="rescored_decoy_distribution"/>
+        </view>
+    	<block id="rescored_decoy_distribution" type="histogramdisplayer" viewname="view_rescored_psms_with_ambiguity" columnname="score" filtercolumn="decoy" filtervalue="1">
+            <data>
+                <source type="file" name="statistics/"/>
+                <parsers>
+                    <parser type="stream" contentType="text/plain"/>
+                </parsers>
+            </data>
+        </block>
+
+
+		<view id="original_target_distribution" label="original_target_distribution" group="Target Decoy Score Distributions">
+                <blockRef id="main" type="original_target_distribution"/>
+        </view>
+    	<block id="original_target_distribution" type="histogramdisplayer" viewname="view_original_psms" columnname="score" filtercolumn="decoy" filtervalue="0">
+            <data>
+                <source type="file" name="statistics/"/>
+                <parsers>
+                    <parser type="stream" contentType="text/plain"/>
+                </parsers>
+            </data>
+        </block>
+
+		<view id="original_decoy_distribution" label="original_decoy_distribution" group="Target Decoy Score Distributions">
+                <blockRef id="main" type="original_decoy_distribution"/>
+        </view>
+    	<block id="original_decoy_distribution" type="histogramdisplayer" viewname="view_original_psms" columnname="score" filtercolumn="decoy" filtervalue="1">
+            <data>
+                <source type="file" name="statistics/"/>
+                <parsers>
+                    <parser type="stream" contentType="text/plain"/>
+                </parsers>
+            </data>
+        </block>
+
+
+
+
+
+
+
+
+</interface>

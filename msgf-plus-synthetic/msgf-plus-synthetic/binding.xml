@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<binding>
+	<bind action="begin" type="download">
+	 	<url value="{livesearch.download}"/>
+	 	<query name="task" valueRef="@task"/>
+	 	<query name="user" valueRef="@user"/>
+	 	<compression type="zip"/>
+		<download port="spec" type="folder">
+			<query name="resource" value="spec"/>
+		</download>
+		<download port="fasta" type="folder">
+			<query name="resource" value="fasta"/>
+		</download>
+		<download port="params" type="file">
+			<query name="resource" value="params"/>
+		</download>
+		<downloadParams>
+			<query name="resource" value="params"/>
+		</downloadParams>
+	</bind>
+
+	<bind action="mergeSequences" tool="mergeFasta">
+		<inputAsRequirement port="fasta" requirement="input"/>
+		<productionToOutput port="out"   production="output"/>
+	</bind>
+
+	<bind action="buildSA" tool="MSGFPlus_BuildSA">
+		<inputAsRequirement port="fasta" requirement="input"/>
+		<productionToOutput port="out"   production="output"/>
+	</bind>
+
+	<bind action="msgfPlus" tool="MSGFPlus">
+		<inputAsRequirement port="spec"   requirement="spectrum"/>
+		<inputAsRequirement port="fasta"  requirement="sequence"/>
+		<inputAsRequirement port="seq"    requirement="preparedSequence"/>
+		<inputAsRequirement port="params" requirement="parameters"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+	<bind action="msgfPlusConvert" tool="MSGFPlus_ConvertToTSV">
+		<inputAsRequirement port="in"  requirement="input"/>
+		<productionToOutput port="out" production="output"/>
+	</bind>
+
+	<bind action="merge" tool="mergeWithHeader">
+		<inputAsRequirement port="result"       requirement="input"/>
+		<productionToOutput port="mergedResult" production="output"/>
+	</bind>
+
+	<bind action="fdr" tool="ComputeFDR_msgfDB">
+		<inputAsRequirement port="in"  requirement="input"/>
+		<productionToOutput port="out" production="output"/>
+	</bind>
+
+	<bind action="createConvertConfig" tool="MSGFDB_TSVToMzTabParameters">
+		<inputAsRequirement port="input"  requirement="input"/>
+		<inputAsRequirement port="params" requirement="params"/>
+		<productionToOutput port="output" production="output"/>
+	</bind>
+
+	<bind action="convertTSVToMzTab" tool="TSVToMzTabConverter">
+		<inputAsRequirement port="tsv"           requirement="input"/>
+		<inputAsRequirement port="convertParams" requirement="params"/>
+		<productionToOutput port="mzTab"         production="output"/>
+	</bind>
+
+	<bind action="validateMzTab" tool="countResultFileStatistics">
+		<inputAsRequirement port="params" requirement="params"/>
+		<inputAsRequirement port="mzTab"  requirement="mztab"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+    <!-- KL and Ambiguity -->
+    <bind action="generate_kl_divergence" tool="generate_kl_divergence">
+        <inputAsRequirement port="parameters"             requirement="parameters"/>
+        <inputAsRequirement port="spectrum"             requirement="spectrum"/>
+        <productionToOutput port="kl_scratch"    production="kl_scratch"/>
+        <productionToOutput port="kl_output"    production="kl_output"/>
+    </bind>
+
+	<bind action="generate_collision_energy_stats" tool="generate_collision_energy_stats">
+        <inputAsRequirement port="parameters"             requirement="parameters"/>
+        <inputAsRequirement port="spectrum"             requirement="spectrum"/>
+        <productionToOutput port="ms2_metadata_folder"    production="ms2_metadata_folder"/>
+    </bind>
+
+	<bind action="filter_psms" tool="filter_psms">
+        <inputAsRequirement port="parameters"             requirement="parameters"/>
+        <inputAsRequirement port="spectrum"             requirement="spectrum"/>
+		<inputAsRequirement port="all_spectrum_folder"             requirement="all_spectrum_folder"/>
+		<inputAsRequirement port="mergedResult"             requirement="mergedResult"/>
+		<inputAsRequirement port="ms2_metadata_folder"             requirement="ms2_metadata_folder"/>
+        <productionToOutput port="filtered_psms_folder"    production="filtered_psms_folder"/>
+    </bind>
+
+    <bind action="merge_filtered_psms" tool="merge_filtered_psms">
+        <inputAsRequirement port="parameters"             requirement="parameters"/>
+		<inputAsRequirement port="filtered_psms_folder"             requirement="filtered_psms_folder"/>
+        <productionToOutput port="merged_filtered_psms_file"    production="merged_filtered_psms_file"/>
+    </bind>
+
+    <bind action="add_kl_to_psms" tool="add_kl_to_psms">
+        <inputAsRequirement port="parameters"             requirement="parameters"/>
+        <inputAsRequirement port="merged_filtered_psms_file"             requirement="merged_filtered_psms_file"/>
+        <inputAsRequirement port="kl_output"             requirement="kl_output"/>
+        <productionToOutput port="merged_result_with_kl_with_ambiguity"    production="merged_result_with_kl_with_ambiguity"/>
+		<productionToOutput port="decoy_psms"    production="decoy_psms"/>
+    </bind>
+
+    <bind action="createConvertConfig" tool="MSGFPlus_TSVToMzTabParameters">
+		<inputAsRequirement port="input"  requirement="input"/>
+		<inputAsRequirement port="params" requirement="params"/>
+		<productionToOutput port="output" production="output"/>
+	</bind>
+
+	<bind action="convertTSVToMzTab" tool="TSVToMzTabConverter">
+		<inputAsRequirement port="tsv"           requirement="input"/>
+		<inputAsRequirement port="convertParams" requirement="params"/>
+		<productionToOutput port="mzTab"         production="output"/>
+	</bind>
+
+	<bind action="validateMzTab" tool="MSGFPlus_MzTabValidator">
+		<inputAsRequirement port="params" requirement="params"/>
+		<inputAsRequirement port="mzTab"  requirement="mzTab"/>
+		<inputAsRequirement port="peak"   requirement="peak"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+	<bind action="cleanMzTab" tool="MSGFPlus_MzTabCleaner">
+		<inputAsRequirement port="params" requirement="params"/>
+		<inputAsRequirement port="mzTab"  requirement="mzTab"/>
+		<inputAsRequirement port="peak"   requirement="peak"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+	<bind action="summarizeMzTab" tool="MSGFPlus_MzTabSummarizer">
+		<inputAsRequirement port="params" requirement="params"/>
+		<inputAsRequirement port="mzTab"  requirement="mzTab"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+
+	<bind action="end" type="upload">
+	 	<url value="{livesearch.upload}"/>
+	 	<query name="task" valueRef="@task"/>
+	 	<contentQuery name="content"/>
+	 	<compression type="zip"/>
+		<upload port="tsv" type="file">
+			<query name="resource" value="result"/>
+		</upload>
+        <upload port="mergedResult" type="file">
+			<query name="resource" value="mergedResult"/>
+		</upload>
+        <upload port="mzTab" type="file">
+			<query name="resource" value="mzTab"/>
+		</upload>
+		<upload port="statistics" type="file">
+			<query name="resource" value="statistics"/>
+		</upload>
+        <upload port="merged_result_with_kl_with_ambiguity" type="file">
+			<query name="resource" value="merged_result_with_kl_with_ambiguity"/>
+		</upload>
+		<upload port="decoy_psms" type="file">
+			<query name="resource" value="decoy_psms"/>
+		</upload>
+	</bind>
+</binding>

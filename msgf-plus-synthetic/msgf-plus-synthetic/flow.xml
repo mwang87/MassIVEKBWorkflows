@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<flow name="msgfplussynthetic">
+	<!-- User-provided input files -->
+	<collection	name="spectrum"/>
+	<collection	name="sequence"/>
+	<!-- ProteoSAFe params.xml -->
+	<object		name="parameters"/>
+	<!-- Intermediate workflow output files -->
+	<object		name="mergedSequence"/>
+	<object	    name="preparedSequence"/>
+	<collection	name="msgfPlusResult"/>
+	<object		name="mergedResult"/>
+	<object     name="convertParameters"/>
+
+	<collection	name="mzidResult"/>
+
+	<!-- Final workflow result files -->
+	<object		name="tsvResult"/>
+	<collection name="mzTabResult"/>
+	<object     name="mzTabCounts"/>
+
+	<action name="begin">
+		<output port="spec"   collection="spectrum"/>
+		<output port="fasta"  collection="sequence"/>
+		<output port="params" object="parameters"/>
+	</action>
+
+	<action name="mergeSequences">
+		<input  port="fasta" collection="sequence"/>
+		<output port="out"   object="mergedSequence"/>
+	</action>
+
+	<action name="buildSA">
+		<input  port="fasta" object="mergedSequence"/>
+		<output port="out"   object="preparedSequence"/>
+	</action>
+
+	<action name="msgfPlus" multiplicity="multiple" type="parallel">
+		<input  port="spec"   collection="spectrum" transformation="unfolding"/>
+		<input  port="fasta"  object="mergedSequence"/>
+		<input  port="seq"    object="preparedSequence"/>
+		<input  port="params" object="parameters"/>
+		<output port="out"    collection="mzidResult"/>
+	</action>
+
+	<action name="msgfPlusConvert" multiplicity="multiple" type="parallel">
+		<input  port="in"  collection="mzidResult" transformation="unfolding"/>
+		<output port="out" collection="msgfPlusResult"/>
+	</action>
+
+	<action name="merge">
+		<input  port="result"       collection="msgfPlusResult"/>
+		<output port="mergedResult" object="mergedResult"/>
+	</action>
+
+    <!-- KL Code -->
+    <!-- KL Divergence -->
+    <object		name="kl_output"/>
+    <collection		name="kl_scratch"/>
+	<object		name="decoy_psms"/>
+
+
+    <action name="generate_kl_divergence">
+        <input  port="parameters"  object="parameters"/>
+		<input  port="spectrum"  collection="spectrum"/>
+		<output port="kl_scratch"    object="kl_scratch"/>
+        <output port="kl_output"    object="kl_output"/>
+	</action>
+
+	<collection		name="ms2_metadata_folder"/>
+	<action name="generate_collision_energy_stats" multiplicity="multiple" type="parallel">
+        <input  port="parameters"  object="parameters"/>
+		<input  port="spectrum"  collection="spectrum" transformation="unfolding"/>
+        <output port="ms2_metadata_folder"    collection="ms2_metadata_folder"/>
+	</action>
+
+	<!-- Filtering out PSMs in parallel -->
+	<collection		name="filtered_psms_folder"/>
+	<action name="filter_psms" multiplicity="multiple" type="parallel">
+        <input  port="parameters"  object="parameters"/>
+		<input  port="spectrum"  collection="spectrum" transformation="unfolding"/>
+		<input  port="all_spectrum_folder"  collection="spectrum"/>
+		<input  port="mergedResult"         object="mergedResult"/>
+        <input port="ms2_metadata_folder"    collection="ms2_metadata_folder"/>
+		<output port="filtered_psms_folder"    collection="filtered_psms_folder"/>
+	</action>
+
+    <object		name="merged_filtered_psms_file"/>
+	<action name="merge_filtered_psms">
+        <input  port="parameters"  object="parameters"/>
+		<input  port="filtered_psms_folder"  collection="filtered_psms_folder"/>
+        <output port="merged_filtered_psms_file"    object="merged_filtered_psms_file"/>
+	</action>
+
+
+    <!-- Merging KL -->
+    <object		name="merged_result_with_kl_with_ambiguity"/>
+    <action name="add_kl_to_psms">
+        <input  port="parameters"           object="parameters"/>
+		<input  port="merged_filtered_psms_file"         object="merged_filtered_psms_file"/>
+        <input  port="kl_output"            object="kl_output"/>
+        <output port="merged_result_with_kl_with_ambiguity"       object="merged_result_with_kl_with_ambiguity"/>
+		<output port="decoy_psms"       object="decoy_psms"/>
+    </action>
+
+    <!-- mzTab -->
+    <object     name="convertParameters"/>
+	<collection name="convertedMzTab"/>
+	<collection name="validatedMzTab"/>
+    <collection name="cleanedMzTab"/>
+	<object		name="statistics"/>
+
+
+    <action name="createConvertConfig">
+		<input  port="input"  object="merged_result_with_kl_with_ambiguity"/>
+		<input  port="params" object="parameters"/>
+		<output port="output" object="convertParameters"/>
+	</action>
+
+	<action name="convertTSVToMzTab">
+		<input  port="tsv"            object="merged_result_with_kl_with_ambiguity"/>
+		<input  port="convertParams"  object="convertParameters"/>
+		<output port="mzTab"          collection="convertedMzTab"/>
+	</action>
+
+	<action name="validateMzTab">
+		<input  port="params" object="parameters"/>
+		<input  port="mzTab"  collection="convertedMzTab"/>
+		<input  port="peak"   collection="spectrum"/>
+		<output port="out"    collection="validatedMzTab"/>
+	</action>
+
+	<action name="cleanMzTab">
+		<input  port="params" object="parameters"/>
+		<input  port="mzTab"  collection="validatedMzTab"/>
+		<input  port="peak"   collection="spectrum"/>
+		<output port="out"    collection="cleanedMzTab"/>
+	</action>
+
+	<action name="summarizeMzTab">
+		<input  port="params" object="parameters"/>
+		<input  port="mzTab"  collection="cleanedMzTab"/>
+		<output port="out"    object="statistics"/>
+	</action>
+
+	<action name="end">
+        <input port="kl_output" object="kl_output"/>
+        <input port="mergedResult" object="mergedResult"/>
+        <input port="decoy_psms" object="decoy_psms"/>
+        <input port="merged_result_with_kl_with_ambiguity" object="merged_result_with_kl_with_ambiguity"/>
+        <input port="merged_filtered_psms_file" object="merged_filtered_psms_file"/>
+        <input port="mzTab"                                collection="cleanedMzTab"/>
+		<input port="statistics"                           object="statistics"/>
+	</action>
+</flow>

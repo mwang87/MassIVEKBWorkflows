@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<binding>
+	<bind action="begin" type="download">
+	 	<url value="{livesearch.download}"/>
+	 	<query name="task" valueRef="@task"/>
+	 	<query name="user" valueRef="@user"/>
+	 	<compression type="zip"/>
+		<download port="spec" type="folder">
+			<query name="resource" value="spec"/>
+		</download>
+		<download port="fasta" type="folder">
+			<query name="resource" value="fasta"/>
+		</download>
+		<download port="params" type="file">
+			<query name="resource" value="params"/>
+		</download>
+		<downloadParams>
+			<query name="resource" value="params"/>
+		</downloadParams>
+	</bind>
+
+	<bind action="mergeSequences" tool="mergeFasta">
+		<inputAsRequirement port="fasta" requirement="input"/>
+		<productionToOutput port="out"   production="output"/>
+	</bind>
+
+	<bind action="buildSA" tool="MSGFPlus_BuildSA">
+		<inputAsRequirement port="fasta" requirement="input"/>
+		<productionToOutput port="out"   production="output"/>
+	</bind>
+
+	<bind action="msgfPlus" tool="MSGFPlus">
+		<inputAsRequirement port="spec"   requirement="spectrum"/>
+		<inputAsRequirement port="fasta"  requirement="sequence"/>
+		<inputAsRequirement port="seq"    requirement="preparedSequence"/>
+		<inputAsRequirement port="params" requirement="parameters"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+	<bind action="msgfPlusConvert" tool="MSGFPlus_ConvertToTSV">
+		<inputAsRequirement port="in"  requirement="input"/>
+		<productionToOutput port="out" production="output"/>
+	</bind>
+
+	<bind action="merge" tool="mergeWithHeader">
+		<inputAsRequirement port="result"       requirement="input"/>
+		<productionToOutput port="mergedResult" production="output"/>
+	</bind>
+
+	<bind action="fdr" tool="ComputeFDR_msgfDB">
+		<inputAsRequirement port="in"  requirement="input"/>
+		<productionToOutput port="out" production="output"/>
+	</bind>
+
+	<!-- Two Pass -->
+	<bind action="generate_first_pass_peptides" tool="generate_first_pass_peptides">
+		<inputAsRequirement port="searchresults"       requirement="searchresults"/>
+		<productionToOutput port="firstpass_only_unique_peptides" production="firstpass_only_unique_peptides"/>
+		<productionToOutput port="firstpass_only_peptides_full_results" production="firstpass_only_peptides_full_results"/>
+	</bind>
+
+	<bind action="first_pass_proteins_mapping_stats" tool="first_pass_proteins_mapping_stats">
+		<inputAsRequirement port="inputfasta"       requirement="inputfasta"/>
+		<inputAsRequirement port="searchresults" requirement="searchresults"/>
+		<productionToOutput port="first_pass_protein_stats_table" production="first_pass_protein_stats_table"/>
+	</bind>
+
+	<bind action="generate_second_pass_proteins" tool="generate_second_pass_proteins">
+		<inputAsRequirement port="inputfasta" requirement="inputfasta"/>
+		<inputAsRequirement port="searchresults"  requirement="searchresults"/>
+		<productionToOutput port="secondpassproteins"    production="secondpassproteins"/>
+		<productionToOutput port="secondpassproteins_list"    production="secondpassproteins_list"/>
+	</bind>
+
+    <bind action="generate_second_pass_fasta" tool="generate_second_pass_fasta">
+		<inputAsRequirement port="inputfasta" requirement="inputfasta"/>
+		<inputAsRequirement port="secondpassproteins"  requirement="secondpassproteins"/>
+		<productionToOutput port="secondpassfasta"    production="secondpassfasta"/>
+	</bind>
+
+    <bind action="buildSA_secondpass" tool="MSGFPlus_BuildSA">
+		<inputAsRequirement port="fasta" requirement="input"/>
+		<productionToOutput port="out"   production="output"/>
+	</bind>
+
+	<bind action="msgfPlus_secondpass" tool="MSGFPlus">
+		<inputAsRequirement port="spec"   requirement="spectrum"/>
+		<inputAsRequirement port="fasta"  requirement="sequence"/>
+		<inputAsRequirement port="seq"    requirement="preparedSequence"/>
+		<inputAsRequirement port="params" requirement="parameters"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+	<bind action="msgfPlusConvert_secondpass" tool="MSGFPlus_ConvertToTSV">
+		<inputAsRequirement port="in"  requirement="input"/>
+		<productionToOutput port="out" production="output"/>
+	</bind>
+
+	<bind action="merge_secondpass" tool="mergeWithHeader">
+		<inputAsRequirement port="result"       requirement="input"/>
+		<productionToOutput port="mergedResult" production="output"/>
+	</bind>
+
+	<bind action="reconcile_evalue" tool="reconcile_evalue">
+		<inputAsRequirement port="mergedResult"       requirement="mergedResult"/>
+		<inputAsRequirement port="mergedResult_secondpass"       requirement="mergedResult_secondpass"/>
+		<inputAsRequirement port="mergedSequence"       requirement="mergedSequence"/>
+		<inputAsRequirement port="secondpassproteins"       requirement="secondpassproteins"/>
+		<productionToOutput port="firstpass_peptides" production="firstpass_peptides"/>
+		<productionToOutput port="secondpass_peptides" production="secondpass_peptides"/>
+		<productionToOutput port="original_psms" production="original_psms"/>
+        <productionToOutput port="updated_eval_psms" production="updated_eval_psms"/>
+		<productionToOutput port="original_eval_psms_high_fdr" production="original_eval_psms_high_fdr"/>
+		<productionToOutput port="updated_eval_psms_high_fdr" production="updated_eval_psms_high_fdr"/>
+	</bind>
+
+	<bind action="proteome_statistics_summary" tool="proteome_statistics_summary">
+        <inputAsRequirement port="peptidelist"             requirement="peptidelist"/>
+        <inputAsRequirement port="fastadb"             requirement="fastadb"/>
+        <productionToOutput port="library_coverage_summary_statistics"    production="library_coverage_summary_statistics"/>
+    </bind>
+
+    <bind action="generate_kl_divergence" tool="generate_kl_divergence">
+        <inputAsRequirement port="parameters"             requirement="parameters"/>
+        <inputAsRequirement port="spectrum"             requirement="spectrum"/>
+        <productionToOutput port="kl_scratch"    production="kl_scratch"/>
+        <productionToOutput port="kl_output"    production="kl_output"/>
+    </bind>
+
+    <bind action="add_kl_to_updated_eval_psms" tool="add_kl_to_updated_eval_psms">
+        <inputAsRequirement port="parameters"             requirement="parameters"/>
+        <inputAsRequirement port="updated_eval_psms"             requirement="updated_eval_psms"/>
+        <inputAsRequirement port="kl_output"             requirement="kl_output"/>
+        <productionToOutput port="updated_eval_psms_with_kl"    production="updated_eval_psms_with_kl"/>
+    </bind>
+
+	<bind action="add_ambiguity_to_psms" tool="add_ambiguity_to_psms">
+        <inputAsRequirement port="updated_eval_psms_with_kl"             requirement="updated_eval_psms_with_kl"/>
+        <inputAsRequirement port="spectrum"             requirement="spectrum"/>
+        <productionToOutput port="updated_eval_psms_with_kl_with_ambiguity"    production="updated_eval_psms_with_kl_with_ambiguity"/>
+    </bind>
+
+	<bind action="filter" tool="clean_tsv_file_for_mztab_conversion">
+        <inputAsRequirement port="updated_eval_psms_with_kl_with_ambiguity"          requirement="updated_eval_psms_with_kl_with_ambiguity"/>
+        <productionToOutput port="updated_eval_psms_with_kl_with_ambiguity_filtered" production="updated_eval_psms_with_kl_with_ambiguity_filtered"/>
+    </bind>
+
+	<bind action="createConvertConfig" tool="MSGFPlus_TSVToMzTabParameters">
+		<inputAsRequirement port="input"  requirement="input"/>
+		<inputAsRequirement port="params" requirement="params"/>
+		<productionToOutput port="output" production="output"/>
+	</bind>
+
+	<bind action="convertTSVToMzTab" tool="TSVToMzTabConverter">
+		<inputAsRequirement port="tsv"           requirement="input"/>
+		<inputAsRequirement port="convertParams" requirement="params"/>
+		<productionToOutput port="mzTab"         production="output"/>
+	</bind>
+
+	<bind action="validateMzTab" tool="MSGFPlus_MzTabValidator">
+		<inputAsRequirement port="params" requirement="params"/>
+		<inputAsRequirement port="mzTab"  requirement="mzTab"/>
+		<inputAsRequirement port="peak"   requirement="peak"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+	<bind action="cleanMzTab" tool="MSGFPlus_MzTabCleaner">
+		<inputAsRequirement port="params" requirement="params"/>
+		<inputAsRequirement port="mzTab"  requirement="mzTab"/>
+		<inputAsRequirement port="peak"   requirement="peak"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+	<bind action="summarizeMzTab" tool="MSGFPlus_MzTabSummarizer">
+		<inputAsRequirement port="params" requirement="params"/>
+		<inputAsRequirement port="mzTab"  requirement="mzTab"/>
+		<productionToOutput port="out"    production="output"/>
+	</bind>
+
+	<bind action="end" type="upload">
+	 	<url value="{livesearch.upload}"/>
+	 	<query name="task" valueRef="@task"/>
+	 	<contentQuery name="content"/>
+	 	<compression type="zip"/>
+		<upload port="tsv" type="file">
+			<query name="resource" value="result"/>
+		</upload>
+        <upload port="mergedResult" type="file">
+			<query name="resource" value="mergedResult"/>
+		</upload>
+		<upload port="secondpassproteins" type="file">
+			<query name="resource" value="secondpassproteins"/>
+		</upload>
+        <upload port="secondpassfasta" type="file">
+			<query name="resource" value="secondpassfasta"/>
+		</upload>
+        <upload port="mergedResult_secondpass" type="file">
+			<query name="resource" value="mergedResult_secondpass"/>
+		</upload>
+		<upload port="firstpass_peptides" type="file">
+			<query name="resource" value="firstpass_peptides"/>
+		</upload>
+		<upload port="secondpass_peptides" type="file">
+			<query name="resource" value="secondpass_peptides"/>
+		</upload>
+		<upload port="secondpassproteins_list" type="file">
+			<query name="resource" value="secondpassproteins_list"/>
+		</upload>
+		<upload port="firstpass_only_unique_peptides" type="file">
+			<query name="resource" value="firstpass_only_unique_peptides"/>
+		</upload>
+		<upload port="firstpass_only_peptides_full_results" type="file">
+			<query name="resource" value="firstpass_only_peptides_full_results"/>
+		</upload>
+		<upload port="library_coverage_summary_statistics" type="file">
+            <query name="resource" value="library_coverage_summary_statistics"/>
+        </upload>
+		<upload port="first_pass_protein_stats_table" type="file">
+            <query name="resource" value="first_pass_protein_stats_table"/>
+        </upload>
+        <upload port="updated_eval_psms" type="file">
+            <query name="resource" value="updated_eval_psms"/>
+        </upload>
+        <upload port="kl_output" type="file">
+            <query name="resource" value="kl_output"/>
+        </upload>
+		<upload port="updated_eval_psms_with_kl" type="file">
+            <query name="resource" value="updated_eval_psms_with_kl"/>
+        </upload>
+		<upload port="updated_eval_psms_with_kl_with_ambiguity" type="file">
+            <query name="resource" value="updated_eval_psms_with_kl_with_ambiguity"/>
+		</upload>
+		<upload port="original_eval_psms_high_fdr" type="file">
+            <query name="resource" value="original_eval_psms_high_fdr"/>
+		</upload>
+		<upload port="updated_eval_psms_high_fdr" type="file">
+            <query name="resource" value="updated_eval_psms_high_fdr"/>
+		</upload>
+		<upload port="mzTab" type="file">
+			<query name="resource" value="mzTab"/>
+		</upload>
+		<upload port="statistics" type="file">
+			<query name="resource" value="statistics"/>
+		</upload>
+	</bind>
+</binding>
