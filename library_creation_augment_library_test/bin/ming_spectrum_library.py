@@ -628,6 +628,8 @@ def load_gnps_library_mgf_file(filename):
     spectrum_count = 0
     non_empty_spectrum = 0
     spectrumid = ""
+    inchi_string = ""
+    smiles_string = "N/A"
 
     output_spectra = []
 
@@ -646,6 +648,8 @@ def load_gnps_library_mgf_file(filename):
             scan = 0
             peptide = ""
             protein = ""
+            inchi_string = ""
+            smiles_string = "N/A"
             continue
 
         if mgf_file_line == "END IONS":
@@ -660,6 +664,8 @@ def load_gnps_library_mgf_file(filename):
                 adding_spectrum = Spectrum(filename, scan, -1, peaks, mz, charge, 2)
                 library_spectrum = LibrarySpectrum(adding_spectrum)
                 library_spectrum.spectrumid = spectrumid
+                library_spectrum.inchi = inchi_string
+                library_spectrum.smiles = smiles_string
                 output_spectra.append(library_spectrum)
             else:
                 output_spectra.append(None)
@@ -683,8 +689,17 @@ def load_gnps_library_mgf_file(filename):
         if mgf_file_line[:8] == "PROTEIN=":
             protein = mgf_file_line[8:]
             continue
+
         if mgf_file_line[:11] == "SPECTRUMID=":
             spectrumid = mgf_file_line[11:]
+            continue
+
+        if mgf_file_line[:6] == "INCHI=":
+            inchi_string = mgf_file_line[6:]
+            continue
+        
+        if mgf_file_line[:7] == "SMILES=":
+            smiles_string = mgf_file_line[7:]
             continue
 
         if mgf_file_line.find("=") == -1:
