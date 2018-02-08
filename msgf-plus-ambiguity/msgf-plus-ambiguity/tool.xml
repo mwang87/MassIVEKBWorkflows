@@ -112,7 +112,7 @@
 
 	<tool name="MSGFPlus_ConvertToTSV">
 		<require name="input"  type="file"/>
-		<produce name="output" type="file" naming="title" extension="tsv"/>
+		<produce name="output" type="file" naming="explicit" extension="tsv"/>
 
 		<execution env="java" argConvention="gnu">
 			<mainClass name="edu.ucsd.msjava.ui.MzIDToTsv"/>
