@@ -24,7 +24,7 @@ def transform_peptide_to_msp_mods(input_peptide):
 
         #N-term only
         if atom[0] == "-" or atom[0] == "+":
-            mod_string = str(0) + "," + all_atoms[index][0] + "," + string_to_msp_name(atom)
+            mod_string = str(0) + "," + all_atoms[index][-1] + "," + string_to_msp_name(atom)
             mod_list.append(mod_string)
             continue
 
